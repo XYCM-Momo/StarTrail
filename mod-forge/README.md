@@ -97,9 +97,13 @@ powershell -ExecutionPolicy Bypass -File ..\tools\build-mod.ps1
 
 （已自带 Gradle Wrapper 8.1.1，首次运行会自动下载 Gradle；也可以直接用本机 gradle。）
 
-`gradle.properties` 里的 `org.gradle.java.home=E:/jdk-17.0.20.1+1` 是本机 JDK 17 路径，
+`gradle.properties` 里的 `org.gradle.java.home` 指向**本工作区自带的 JDK 17**：
+`tools\jdk-17.0.20.1+1`（2026-09-17 从 `E:\jdk-17.0.20.1+1` 搬进来的）。
 换机器时改成自己的 JDK 17 路径，或者删掉这一行（把 `JAVA_HOME` 指向 JDK 17 即可）。
-本工作区已经放好了一份 JDK 17（`E:\jdk-17.0.20.1+1`），所以直接构建即可。
+
+> ⚠️ 这个路径里有中文，而 `gradle.properties` 被 Gradle 按 ISO-8859-1 解码，
+> 所以配置文件里写的是 `\uXXXX` 转义形式，**不要改成直接写中文**，否则会乱码、构建失败。
+> 该 JDK 目录已排除在 Git 与 `backups\` 快照之外（约 300MB，可重新下载）。
 
 ## 5. 移植对照表（Fabric API → Forge 47.4.10）
 

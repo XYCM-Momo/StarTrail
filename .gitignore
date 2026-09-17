@@ -10,6 +10,9 @@ plugin-paper/run/
 # ── 备份快照：体积大，而且是"版本库本身的备份"，不该套娃 ──
 backups/
 
+# ── 工作区自带的 JDK 17（构建用，约 300MB，可重新下载）──
+tools/jdk-17.0.20.1+1/
+
 # ── 移植中间产物里的大二进制：都能重新下载/重新生成 ──
 # （反编译出来的源码 src-mod / src-mojmap / src-plugin 是留着的，那些不可再生）
 archive/port-work/x-mod/

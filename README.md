@@ -61,8 +61,10 @@ MMmap/
 │  └─ DEPLOY.md               部署清单：装到哪个客户端 / 服务端、怎么验证
 │
 ├─ tools/
+│  ├─ jdk-17.0.20.1+1        工作区自带的 JDK 17（构建用，约 300MB，不进 Git/快照）
 │  ├─ build-mod.ps1           编译模组 + 发布到 dist + 刷新校验清单
 │  ├─ build-plugin.ps1        编译服务端插件 + 发布到 dist + 刷新校验清单
+│  ├─ smoke-test-plugin.ps1   一次性 Paper 服冒烟测试插件（不动线上服务端）
 │  ├─ verify-dist.ps1         列出/刷新/校验 dist 成品的 SHA256
 │  └─ backup.ps1              整个工作区打包快照到 backups\
 │
@@ -124,9 +126,9 @@ powershell -ExecutionPolicy Bypass -File tools\verify-dist.ps1 -Check
 | 客户端目标 | Minecraft **1.20.1** + Forge **47.4.10**（`mods.toml` 写的是 `[47,)`），**Java 17** |
 | Fabric 目标 | Minecraft 1.20.1 + Fabric API |
 | 服务端 | Paper **1.20.1** |
-| 本机 JDK 17 | `E:\jdk-17.0.20.1+1`（写死在两个工程的 `gradle.properties` 里，换机器要改） |
+| 本工作区自带 JDK 17 | `tools\jdk-17.0.20.1+1`（约 300MB，两个工程的 `gradle.properties` 都指向它；已排除在 Git 与快照外） |
 | 服务端运行环境 | JDK **21**（`C:\Program Files\Microsoft\jdk-21.0.9.10-hotspot`）+ `Paper-1.20.1.jar` |
-| Gradle | 两个工程都自带 Wrapper 8.1.1，不用单独装 |
+| Gradle | 两个工程都自带 Wrapper 8.1.1，发行版已缓存在 `C:\Users\Lenovo\.gradle\wrapper\dists`，不用单独装 Gradle |
 | 依赖缓存 | `C:\Users\Lenovo\.gradle\caches`，已缓存 Forge 1.20.1-47.4.10、MCP 配置、Paper API，**可以离线编译** |
 | Git | **已装**：`D:\Git`（2.55.0，仅当前用户，配置全在 `D:\Git\etc\gitconfig`，C 盘只有一条 PATH 环境变量） |
 

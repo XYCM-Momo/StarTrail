@@ -85,6 +85,8 @@ if ($Prune) {
 $exclude = @('backups\')
 if (-not $IncludeBuild) {
     $exclude += @('mod-forge\build\', 'mod-forge\.gradle\', 'plugin-paper\build\', 'plugin-paper\.gradle\')
+    # 工作区自带的 JDK 17（约 300MB），没必要进快照
+    $exclude += @('tools\jdk-17.0.20.1+1\')
 }
 
 $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
