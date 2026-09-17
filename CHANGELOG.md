@@ -53,7 +53,13 @@
 **产物变化**：`dist/server-plugin/MMmap-Plugin-1.9.4.jar` 换成了**从源码编译**的版本
 （SHA256 `3E6AEF9C…`，72,017 字节；原版是 `561B0789…`，72,076 字节）。
 两者行为经上述四项检查判定等价。**原版 jar 完整保留在** `releases/mod-1.9.5_plugin-1.9.4/`。
-**线上服务端暂未更换**，仍跑着原版 jar。
+
+**线上服务端已于同日换用源码编译版**：`时旅服务端\plugins\MMmap-Plugin-1.9.4.jar`
+现为 `3E6AEF9C…`，与 `dist/` 哈希一致。
+* 换之前先备份了服务端插件数据目录（5 个文件：`config.yml`、`images.yml`、`language.yml`、
+  `regions\regions.yml`、`warps\main-city.yml`）→ `backups\_live-server-MMmap-data_20260917_162810.zip`。
+* 数据目录 `plugins\MMmap\` 未做任何改动。
+* 回滚方式：把 `releases/mod-1.9.5_plugin-1.9.4/MMmap-Plugin-1.9.4.jar` 覆盖回去即可。
 
 ---
 
