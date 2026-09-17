@@ -49,6 +49,13 @@
 | 6 个 yml + MANIFEST.MF | 逐字节一致（SHA256 相同） |
 | 29 个类 `javap -p` 成员声明比对 | 字段/方法/修饰符全部一致，零差异 |
 | 一次性 Paper 1.20.1 实机启动 | 正常加载并启用，无任何 ERROR/Exception |
+| 一次性 Paper + **完整 MythicMobs 5.6.2** 实机启动 | `MythicMobs 集成: 已启用`、`怪物头像同步已启动 (半径 128.0)`，无 MMmap 异常 |
+
+> MythicMobs 那条路径的验证有个坑：测试服里只放 MythicMobs 的 jar 是**不够的**，
+> 它自己会因为缺少数据目录而 NPE 启动失败（`Error occurred while enabling MythicMobs`）。
+> `tools\smoke-test-plugin.ps1 -WithMythicMobs` 现在会连它的数据目录一起复制过去。
+> 另外该脚本现在会把「MMmap 自己的报错」和「其它插件的报错」分开判定，
+> 只有前者才会让测试失败。
 
 **产物变化**：`dist/server-plugin/MMmap-Plugin-1.9.4.jar` 换成了**从源码编译**的版本
 （SHA256 `3E6AEF9C…`，72,017 字节；原版是 `561B0789…`，72,076 字节）。
