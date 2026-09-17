@@ -1,0 +1,12 @@
+# MMmap 服务端配置
+# 已清理 v1.9.3：移除全部无用的旧配置（区块颜色/同步距离/自动保存/日志开关，代码均未读取）
+settings:
+  # 大地图传送点图标消失阈值（缩放比例，0.0-1.0）
+  # 当缩放比例小于此值时，大地图不显示传送点图标
+  warp-icon-hide-threshold: 0.8
+  # MythicMobs 怪物头像缺失时是否显示紫色 fallback 方块（true=显示，false=不显示）
+  # 怪物头像功能本身默认开启，此设置仅控制没有对应头像图片时的兜底显示
+  show-mob-head-fallback: true
+  # MythicMobs 怪物同步半径（方块）
+  # 服务端每 2 秒扫描玩家附近此半径内的 MM 怪物并同步到客户端
+  mythic-mob-track-radius: 128

@@ -1,0 +1,16 @@
+{
+  "mappings": {
+    "com/mmap/client/mixin/ClientPlayNetworkHandlerMixin": {
+      "sendChatCommand": "Lnet/minecraft/class_634;method_45730(Ljava/lang/String;)V",
+      "sendCommand": "Lnet/minecraft/class_634;method_45731(Ljava/lang/String;)Z"
+    }
+  },
+  "data": {
+    "named:intermediary": {
+      "com/mmap/client/mixin/ClientPlayNetworkHandlerMixin": {
+        "sendChatCommand": "Lnet/minecraft/class_634;method_45730(Ljava/lang/String;)V",
+        "sendCommand": "Lnet/minecraft/class_634;method_45731(Ljava/lang/String;)Z"
+      }
+    }
+  }
+}

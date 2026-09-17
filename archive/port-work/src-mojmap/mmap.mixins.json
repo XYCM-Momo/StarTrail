@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.mmap.client.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "client": [
+    "ClientPlayNetworkHandlerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "refmap": "mmap-refmap.json"
+}

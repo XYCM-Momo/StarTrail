@@ -1,0 +1,28 @@
+name: MMmap
+version: '1.9.4'
+main: com.mmap.server.MMmapPlugin
+api-version: '1.20'
+author: MMmap Team
+description: 地图区域管理与客户端同步插件
+softdepend: [MythicMobs]
+
+commands:
+  mmmap:
+    description: MMmap 主命令
+    usage: /<command> <add|remove|list|info|reload|help>
+    permission: mmap.command
+    aliases: [mmap, map, minimap]
+
+permissions:
+  mmap.command:
+    description: 允许使用 MMmap 命令
+    default: op
+  mmap.command.add:
+    description: 允许创建区域
+    default: op
+  mmap.command.remove:
+    description: 允许删除区域
+    default: op
+  mmap.command.reload:
+    description: 允许重载配置
+    default: op

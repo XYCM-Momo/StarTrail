@@ -1,0 +1,93 @@
+# MMmap 区域配置默认模板(v1.7.2+)
+#
+# v1.7.2 起, 区域配置改为文件夹形式: plugins/MMmap/regions/*.yml
+#   - 单个 yml 可放一个或多个区域
+#   - 单个 yml 单区域: 顶层直接是字段(name/world/... 见下), id = 文件名(不含 .yml)
+#   - 单个 yml 多区域: 顶层用一个段(段名随便, 比如 regions: 或 towns:), 段下每个 key 是一个区域,
+#                      id = "<file>.<段内 key>", 避免不同文件 id 冲突
+#   - 矩形和多边形混在同一文件夹, 靠 shape 字段区分:
+#       shape=rectangle(默认)         矩形区域
+#       shape=polygon 或含 polygon 顶层 list  多边形区域
+#
+# 文件名自己取, 不影响加载(只要 .yml 后缀)。
+# 修改后执行 /mmap reload 即可推送给客户端。
+#
+# 字段说明:
+#   id:        唯一标识 (单区域模式 = 文件名; 多区域模式 = "<file>.<key>")
+#   shape:     rectangle(默认)|polygon, 多边形必须有 polygon: 顶点列表
+#   name:      显示在地图上的名字
+#   world:     世界名(Bukkit 短名, 如 "world")
+#   minX/minZ/maxX/maxZ/minY/maxY: 矩形区域的范围(多边形不需要)
+#   type:      NORMAL|SAFE|DANGER|CUSTOM, 语义类别
+#   borderColor / fillColor / borderWidth: 渲染颜色/填充/边框宽度(矩形)
+#   description: 描述文本
+#   polygon:   多边形顶点 [{x, z}, {x, z}, ...], 至少 3 个
+#   lineColor / fillColor / showLine / fillEnabled: 多边形渲染相关
+#   enter-commands: 进入该区域时执行的命令列表（v1.9.3, 替代全局 commands.yml）
+#     命令规则:
+#       - 不要带开头的 /
+#       - 用 < 开头表示以玩家身份执行(player.performCommand)
+#       - 不带 < 开头表示以控制台身份执行
+#       - 占位符: {player} 玩家名, {uuid} UUID, {region} 区域ID, {name} 区域名, {world} 世界名
+#       - 示例: ['tell {player} 你进入了 {name}', '<spawn']
+#
+# === 示例 1: 单区域文件 spawn-zone.yml ===
+# name: "新手村"
+# world: "world"
+# minX: -50
+# minZ: -50
+# maxX: 50
+# maxZ: 50
+# minY: 0
+# maxY: 256
+# type: NORMAL
+# borderColor: 0x8800FF00
+# fillColor: 0x3300FF00
+# borderWidth: 2
+# description: "出生点保护区"
+# enter-commands:
+#   - 'tell {player} 你进入了 {name}'
+#   - '<spawn'
+#
+# === 示例 2: 多区域文件 towns.yml ===
+# regions:
+#   capital:
+#     name: "王城"
+#     world: "world"
+#     minX: -100
+#     minZ: -100
+#     maxX: 100
+#     maxZ: 100
+#     type: SAFE
+#     borderColor: 0x88FFD700
+#     description: "王城区域"
+#   mine:
+#     name: "矿场"
+#     world: "world"
+#     minX: 500
+#     minZ: 500
+#     maxX: 600
+#     maxZ: 600
+#     type: DANGER
+#     borderColor: 0x88FF0000
+#     description: "危险矿场"
+#
+# === 示例 3: 多边形区域(单独文件 polygon-demo.yml 或混在 towns.yml 里) ===
+# name: "主城圈"
+# shape: polygon
+# world: "world"
+# lineColor: 0x8800FF00
+# fillColor: 0x2200FF00
+# showLine: true
+# fillEnabled: true
+# polygon:
+#   - {x: -50, z: -50}
+#   - {x: 50, z: -50}
+#   - {x: 50, z: 50}
+#   - {x: -50, z: 50}
+#
+# 提示: 多边形模式下, 段名也不再固定(比如用任意段名都可以), 推荐两种:
+#   - 单文件单多边形: 顶层直接是字段(如上例)
+#   - 多文件多区域: 顶层用任意段(比如 polygons:) 段下放多个多边形
+
+regions: {}

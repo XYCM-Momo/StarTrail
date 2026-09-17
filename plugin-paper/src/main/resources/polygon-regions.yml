@@ -1,0 +1,28 @@
+# MMmap 多边形区域配置
+#
+# 多边形区域是独立功能，不影响 regions.yml 里的矩形区域。
+# 客户端会在大/小地图上画出多边形轮廓（可配 showLine: false 关闭），
+# 并在多边形中心写区域名。玩家进入多边形时会被通知。
+#
+# 颜色使用 ARGB 十六进制：
+#   - lineColor：多边形边线颜色（推荐高对比度的半透明色）
+#   - fillColor：可选，多边形内部填充色（需 fillEnabled: true 才显示）
+#
+# 配置完后用 /mmap reload 重载。
+#
+# 示例：把整个出生点范围圈起来
+# regions:
+#   spawn:
+#     name: "新手村"
+#     world: world
+#     lineColor: 0x8800FF00
+#     fillColor: 0x2200FF00
+#     showLine: true
+#     fillEnabled: false
+#     polygon:
+#       - {x: -50, z: -50}
+#       - {x: 50, z: -50}
+#       - {x: 50, z: 50}
+#       - {x: -50, z: 50}
+
+regions: {}

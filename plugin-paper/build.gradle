@@ -1,0 +1,64 @@
+plugins {
+    id 'java'
+}
+
+// ── 版本号唯一来源：src/main/resources/plugin.yml 里的 version ──
+// （和 VERSIONING.md 的约定一致：插件版本写在 plugin.yml，不在这里手改）
+def pluginYmlFile = file('src/main/resources/plugin.yml')
+def versionMatcher = pluginYmlFile.text =~ /(?m)^version:\s*['"]?([^'"\s]+)['"]?\s*$/
+version = versionMatcher.find() ? versionMatcher.group(1) : '0.0.0'
+group = 'com.mmap'
+
+// MythicMobs 是付费插件，公共仓库里没有，直接用服务端里那一份来编译
+def mythicJarFile = file(mythicmobs_jar)
+if (!mythicJarFile.exists()) {
+    throw new GradleException(
+        "找不到 MythicMobs jar：${mythicJarFile}\n" +
+        "请把 gradle.properties 里的 mythicmobs_jar 改成服务端 plugins/ 下实际的 MythicMobs-*.jar 路径。")
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'papermc'
+        url = 'https://repo.papermc.io/repository/maven-public/'
+    }
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+dependencies {
+    // Paper API：编译期用，不打包进 jar（服务端自带）
+    compileOnly "io.papermc.paper:paper-api:${paper_api_version}"
+    compileOnly files(mythicmobs_jar)
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+tasks.named('jar', Jar).configure {
+    archiveBaseName = 'MMmap-Plugin'
+    // 可复现构建：同样源码 => 逐字节相同的 jar（和 mod-forge 保持一致）
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+    manifest {
+        attributes(
+                'Implementation-Title': 'MMmap Plugin',
+                'Implementation-Version': project.version
+        )
+    }
+}
+
+// 编译完顺手报一下产物，方便确认
+tasks.register('showJar') {
+    dependsOn tasks.named('jar')
+    doLast {
+        def f = tasks.named('jar').get().archiveFile.get().asFile
+        println "产物: ${f}  (${f.length()} 字节)"
+    }
+}

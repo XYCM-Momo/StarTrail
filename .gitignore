@@ -1,0 +1,31 @@
+# ── 构建产物：随时能重新生成，不进版本库 ──
+mod-forge/build/
+mod-forge/.gradle/
+mod-forge/run/
+mod-forge/run-data/
+plugin-paper/build/
+plugin-paper/.gradle/
+plugin-paper/run/
+
+# ── 备份快照：体积大，而且是"版本库本身的备份"，不该套娃 ──
+backups/
+
+# ── 移植中间产物里的大二进制：都能重新下载/重新生成 ──
+# （反编译出来的源码 src-mod / src-mojmap / src-plugin 是留着的，那些不可再生）
+archive/port-work/x-mod/
+archive/port-work/x-plugin/
+archive/port-work/mmap-mojmap.jar
+archive/port-work/tools/vineflower.jar
+archive/port-work/tools/tiny-remapper.jar
+archive/port-work/mappings/intermediary.jar
+archive/port-work/mappings/intermediary.tiny
+archive/port-work/mappings/intermediary-mojmap.tiny
+archive/port-work/mappings/client-1.20.1-mojmap.txt
+
+# ── 系统垃圾 ──
+Thumbs.db
+desktop.ini
+*~
+*.tmp
+*.log
+hs_err_pid*.log

@@ -1,0 +1,47 @@
+# 冻结记录：mod-1.9.5_plugin-1.9.4
+
+| 项目 | 值 |
+|---|---|
+| 冻结日期 | 2026-09-17 |
+| 客户端模组（Forge） | **1.9.5** — `mmap-forge-1.9.5.jar` |
+| 客户端模组（Fabric） | **1.9.5** — `mmap-fabric-1.9.5.jar`（上游原版，未改动） |
+| 服务端插件（Paper） | **1.9.4** — `MMmap-Plugin-1.9.4.jar` |
+| 网络协议 | **v1**（通道 `mmap:main`，包类型 1~9） |
+| 目标环境 | MC 1.20.1 / Forge 47.4.10 / Fabric / Paper 1.20.1，Java 17 |
+
+## 校验值（SHA256）
+
+```
+F6C1163DBE48DB57A179A11E892071305135105E0E2B8280AF4DB9BA9CD46A6A  mmap-fabric-1.9.5.jar
+C990704B8BE0890D98A7107FCB4F49B17EAC507670901C6806FDD76E28AAE563  mmap-forge-1.9.5.jar
+561B07893726E97C6F70BE7E9E353EF6E0C3986C6DDFF50909A244BC47B88D6D  MMmap-Plugin-1.9.4.jar
+```
+
+> Forge 模组自 2026-09-17 起改成**可复现构建**（`build.gradle` 里关掉了构建时间戳），
+> 所以同样的源码重新编译会得到**完全相同的 SHA256**（已用两次 `clean build` 验证）。
+> 之前装进客户端的那份 `mmap-forge-1.9.5.jar` 与此版本**逐类字节一致**，只差 MANIFEST 时间戳，
+> 功能上完全相同，不换也不影响使用。
+
+## 这一版是什么
+
+**首次把上游 Fabric 版模组移植成 Forge 版，并发布出去的一组。**
+
+* 新增 `mod-forge/` Gradle 工程（Fabric → Forge 47.4.10 移植，去掉 Mixin，网络改用 `SimpleChannel`）。
+* 服务端插件与协议**完全没动**。
+* 详细改动见 [`../../CHANGELOG.md`](../../CHANGELOG.md) 的「Forge 移植版 1.9.5」条目，
+  移植原理见 [`../../docs/移植说明.md`](../../docs/移植说明.md)。
+
+## 验证情况
+
+* ✅ `gradle build` 编译通过，`reobfJar` 正常。
+* ✅ 2026-09-17 14:14 在 PCL「时之旅者」（MC 1.20.1 + Forge 47.4.10）实例实机连 Paper 服务端：
+  模组加载成功、通道 `mmap:main` 注册成功并被服务端接受、收到握手包（协议 1）、
+  同步到 2 个图片绑定 + 1 个多边形区域、图片成功加载为 GL 纹理、大地图打开正常。
+* ⚠️ 画面**细节**（区域绘制、传送点图标、怪物头颅、FBO）未经人工确认。
+* ⚠️ 矩形区域路径未实测；该路径存在世界名格式不一致的潜在 bug，见
+  [`../../docs/PROTOCOL.md` 第 5.1 节](../../docs/PROTOCOL.md)。
+
+## 回滚方式
+
+把本目录的 jar 复制回客户端 / 服务端对应位置即可（路径见
+[`../../docs/DEPLOY.md`](../../docs/DEPLOY.md)）。复制后核对 SHA256 是否与上面一致。

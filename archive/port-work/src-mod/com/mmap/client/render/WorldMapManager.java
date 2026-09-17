@@ -1,0 +1,46 @@
+package com.mmap.client.render;
+
+import com.mmap.client.image.MapImageManager;
+import com.mmap.client.region.PolygonRegionStore;
+import com.mmap.client.region.RegionDataStore;
+import com.mmap.client.warp.WarpIconManager;
+import com.mmap.client.warp.WarpPointStore;
+import net.minecraft.class_310;
+
+public class WorldMapManager {
+   private final RegionDataStore regionDataStore;
+   private final PolygonRegionStore polygonRegionStore;
+   private final MapImageManager mapImageManager;
+   private final WarpPointStore warpPointStore;
+   private final WarpIconManager warpIconManager;
+   private boolean isOpen = false;
+
+   public WorldMapManager(
+      RegionDataStore regionDataStore,
+      PolygonRegionStore polygonRegionStore,
+      MapImageManager mapImageManager,
+      WarpPointStore warpPointStore,
+      WarpIconManager warpIconManager
+   ) {
+      this.regionDataStore = regionDataStore;
+      this.polygonRegionStore = polygonRegionStore;
+      this.mapImageManager = mapImageManager;
+      this.warpPointStore = warpPointStore;
+      this.warpIconManager = warpIconManager;
+   }
+
+   public void openWorldMapScreen() {
+      class_310 client = class_310.method_1551();
+      if (client.field_1724 != null && client.field_1687 != null) {
+         WorldMapScreen screen = new WorldMapScreen(
+            this.regionDataStore, this.polygonRegionStore, this.mapImageManager, this.warpPointStore, this.warpIconManager
+         );
+         client.method_1507(screen);
+         this.isOpen = true;
+      }
+   }
+
+   public boolean isOpen() {
+      return this.isOpen;
+   }
+}

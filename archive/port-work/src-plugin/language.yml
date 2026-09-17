@@ -1,0 +1,110 @@
+# MMmap 语言配置文件
+# 颜色代码: &c=红 &a=绿 &e=黄 &b=青 &7=灰 &f=白 &6=金 &r=重置
+# 占位符 {0} {1} {2} {3} 按下方注释说明替换
+# 修改后执行 /mmap reload 即可生效
+
+# === 通用 ===
+# {0} = 用户输入的命令名
+unknown-command: "&c未知命令: {0}"
+player-only: "&c只有玩家可以使用此命令"
+coord-must-number: "&c坐标必须是数字"
+
+# === 区域命令 ===
+region-add-usage: "&c用法: /mmap add <名称> <x1> <z1> <x2> <z2> [类型]"
+region-type-list: "&7类型: NORMAL, SAFE, DANGER, CUSTOM (默认: NORMAL)"
+# {0} = 用户输入的类型名
+region-invalid-type: "&c无效的区域类型: {0}"
+# {0} = 区域名称
+region-created: "&a区域 '{0}' 已成功创建！"
+# {0} = 区域ID
+region-id: "&7ID: {0}"
+# {0} = x1  {1} = z1  {2} = x2  {3} = z2
+region-coords: "&7坐标: ({0}, {1}) -> ({2}, {3})"
+# {0} = 类型显示名
+region-type: "&7类型: {0}"
+region-migrate-warn: "&e⚠ v1.7.2+ 区域配置已迁到 plugins/MMmap/regions/*.yml 多文件, 此命令仅临时写入内存, 重启后丢失"
+region-migrate-warn2: "&e  请手动把此区域追加到 regions/<文件名>.yml(顶层字段或 warps/regions 段下)以持久化"
+region-create-fail: "&c创建区域失败，ID已存在"
+region-remove-usage: "&c用法: /mmap remove <区域ID>"
+# {0} = 用户输入的区域ID
+region-not-found: "&c未找到区域: {0}"
+# {0} = 区域名称
+region-deleted: "&a区域 '{0}' 已删除"
+region-delete-migrate-warn: "&e⚠ 同样请手动从 regions/*.yml 删除该条以持久化"
+region-delete-fail: "&c删除区域失败"
+# {0} = 世界名
+region-list-world: "&e世界 '{0}' 的区域列表:"
+region-list-all: "&e所有区域列表:"
+region-list-empty: "&7暂无区域"
+# {0} = 区域数量
+region-list-count: "&7共 {0} 个区域"
+region-info-usage: "&c用法: /mmap info <区域ID>"
+region-info-title: "&e=== 区域信息 ==="
+# {0} = 区域ID
+region-info-id: "&bID: &f{0}"
+# {0} = 区域名称
+region-info-name: "&b名称: &f{0}"
+# {0} = 世界名
+region-info-world: "&b世界: &f{0}"
+region-info-bounds: "&b坐标范围:"
+# {0} = minX  {1} = maxX
+region-info-x: "&7  X: {0} ~ {1}"
+# {0} = minZ  {1} = maxZ
+region-info-z: "&7  Z: {0} ~ {1}"
+# {0} = minY  {1} = maxY
+region-info-y: "&7  Y: {0} ~ {1}"
+# {0} = 类型显示名
+region-info-type: "&b类型: &f{0}"
+# {0} = 面积数值
+region-info-area: "&b面积: &f{0} 方块"
+# {0} = 描述文本
+region-info-desc: "&b描述: &f{0}"
+
+# === 地图图片命令 ===
+map-add-usage: "&c用法: /mmmap map add <ID> <文件名> <x1> <z1> <x2> <z2> [世界]"
+map-file-hint: "&7文件名：客户端 .minecraft/config/mmap/images/ 目录下的图片文件"
+map-coord-hint: "&7(x1,z1) = 西北角，(x2,z2) = 东南角"
+map-console-world: "&7控制台执行时必须指定世界名"
+map-console-world-error: "&c控制台执行时必须指定世界名！"
+map-console-world-usage: "&7用法：/mmmap map add <ID> <文件名> <x1> <z1> <x2> <z2> <世界>"
+# {0} = 绑定ID
+map-created: "&a地图图片绑定 '{0}' 已创建！"
+# {0} = 文件名
+map-file: "&7文件：{0}"
+# {0} = 世界名
+map-world: "&7世界：{0}"
+# {0} = x1  {1} = z1  {2} = x2  {3} = z2
+map-range: "&7范围：({0},{1}) -> ({2},{3})"
+# {0} = 面积数值
+map-area: "&7面积：{0} 方块"
+# {0} = 文件名
+map-file-place: "&e请将图片文件 {0} 放到客户端 .minecraft/config/mmap/images/ 目录"
+# {0} = 绑定ID
+map-create-fail: "&c创建失败，ID 已存在：{0}"
+map-remove-usage: "&c用法: /mmap map remove <ID>"
+# {0} = 绑定ID
+map-not-found: "&c未找到图片绑定: {0}"
+# {0} = 绑定ID
+map-deleted: "&a图片绑定 '{0}' 已删除"
+map-delete-fail: "&c删除失败"
+map-list-title: "&e=== 地图图片绑定列表 ==="
+map-list-empty: "&7暂无图片绑定"
+# {0} = 图片数量
+map-list-count: "&7共 {0} 个图片绑定"
+
+# === 重载 ===
+reload-success: "&a数据已重载："
+# {0} = 区域数  {1} = 图片数  {2} = 多边形数  {3} = 传送点数  {4} = 命令数
+reload-summary: "&7  区域: {0} | 图片: {1} | 多边形: {2} | 传送点: {3} | 命令: {4}"
+
+# === 帮助 ===
+help-title: "&e=== MMmap 命令帮助 ==="
+help-add: "&b/mmap add <名称> <x1> <z1> <x2> <z2> [类型] &7- 创建区域"
+help-remove: "&b/mmap remove <ID> &7- 删除区域"
+help-list: "&b/mmap list [世界] &7- 列出区域"
+help-info: "&b/mmap info <ID> &7- 查看区域详情"
+help-map-add: "&b/mmap map add <ID> <文件名> <x1> <z1> <x2> <z2> &7- 添加地图图片绑定"
+help-map-remove: "&b/mmap map remove <ID> &7- 删除地图图片绑定"
+help-map-list: "&b/mmap map list &7- 列出地图图片绑定"
+help-reload: "&b/mmap reload &7- 重载配置"
+help-help: "&b/mmap help &7- 显示帮助"

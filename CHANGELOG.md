@@ -1,0 +1,151 @@
+# 变更记录 CHANGELOG
+
+格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
+**每个会让玩家需要换 jar 的改动**都要在这里留一条，并写清「要不要同时升级客户端/服务端」。
+
+---
+
+## [未发布]
+
+（下一次改动的暂存区）
+
+---
+
+## 2026-09-17 · 建立服务端插件源码工程（不涉及版本号）
+
+**改动**：新增 `plugin-paper/` —— 服务端插件 `MMmap-Plugin-1.9.4.jar` 的 Gradle 工程。
+**插件版本号仍是 1.9.4，协议仍是 v1，行为与原版一致**（验证见下）。
+
+在此之前插件是黑盒（只有编译好的 jar，改不了），现在可以改代码、编译、测试、发布了。
+
+* 源码来源：Vineflower 反编译原 jar → 20 个 `.java` **原样**放进 `src/main/java/com/mmap/server/`；
+  6 个资源文件从原 jar **逐字节**解出放进 `src/main/resources/`。
+* 依赖：`paper-api:1.20.1-R0.1-SNAPSHOT`（repo.papermc.io）+ 服务端里的 `MythicMobs-5.6.2.jar`，
+  两者都是 `compileOnly`，不打进 jar。
+* 新增工具：`tools/build-plugin.ps1`（编译+发布到 dist）、`tools/smoke-test-plugin.ps1`（一次性 Paper 服冒烟测试）。
+
+**等价性验证（全部通过）**：
+
+| 检查项 | 结果 |
+|---|---|
+| jar 条目清单 | 36 项对 36 项完全一致（含 29 个 .class） |
+| 6 个 yml + MANIFEST.MF | 逐字节一致（SHA256 相同） |
+| 29 个类 `javap -p` 成员声明比对 | 字段/方法/修饰符全部一致，零差异 |
+| 一次性 Paper 1.20.1 实机启动 | 正常加载并启用，无任何 ERROR/Exception |
+
+**产物变化**：`dist/server-plugin/MMmap-Plugin-1.9.4.jar` 换成了**从源码编译**的版本
+（SHA256 `3E6AEF9C…`，72,017 字节；原版是 `561B0789…`，72,076 字节）。
+两者行为经上述四项检查判定等价。**原版 jar 完整保留在** `releases/mod-1.9.5_plugin-1.9.4/`。
+**线上服务端暂未更换**，仍跑着原版 jar。
+
+---
+
+## 2026-09-17 · 构建改为可复现（不涉及版本号）
+
+**改动**：`mod-forge/build.gradle` 里给 `jar` 任务加上 `preserveFileTimestamps = false`、
+`reproducibleFileOrder = true`，并去掉 MANIFEST 里的 `Implementation-Timestamp`（构建时间）。
+**源码与 jar 内的类文件一个字节都没改**，只是让构建结果不再随时间变化。
+
+**为什么**：以前每次编译，MANIFEST 里的构建时间戳都不同，导致 jar 的 SHA256 每次都变，
+`SHA256SUMS.txt` / `releases/` 的校验值形同虚设，也没法用哈希判断「这个 jar 是哪份源码编的」。
+
+**验证**：连续两次 `gradlew clean build`，产物 SHA256 完全相同 ——
+`C990704B8BE0890D98A7107FCB4F49B17EAC507670901C6806FDD76E28AAE563`。
+
+**影响**：`dist/client-mod/mmap-forge-1.9.5.jar` 的哈希从 `A089745C…` 变成 `C990704B…`。
+和已经装进客户端的旧 jar **逐类一致**（只有 MANIFEST 不同），功能完全相同，不换也不影响使用。
+Fabric 模组与服务端插件不受影响。
+
+---
+
+## 2026-09-17 · 工作区整理（不涉及版本号）
+
+**改动**：把散在根目录的文件收进分类目录，补齐版本规划与备份机制。**没有改任何代码，成品 jar 内容未变。**
+
+* 新增 `dist/`（成品区）、`releases/`（发布冻结区）、`docs/`、`tools/`、`backups/`、`archive/`。
+* 目录改名/移动：
+  * `MMmap-Forge/` → **`mod-forge/`**
+  * `_port_work/` → **`archive/port-work/`**
+  * `移植说明.md` → **`docs/移植说明.md`**
+  * `mmap-1.9.5.jar` → **`dist/client-mod/mmap-fabric-1.9.5.jar`**（加平台后缀，避免和 Forge 产物同名）
+  * `mmap-forge-1.9.5.jar` → **`dist/client-mod/mmap-forge-1.9.5.jar`**
+  * `MMmap-Plugin-1.9.4.jar` → **`dist/server-plugin/MMmap-Plugin-1.9.4.jar`**
+* 清理 `mod-forge/src/main/java/` 下混进去的 5 个 Fabric 残留文件（`fabric.mod.json`、
+  `mmap-refmap.json`、`mmap.mixins.json`、`META-INF/`、`assets/`）→ 移到 `archive/port-work/fabric-leftovers/`。
+  它们本来就不参与编译，只是噪音。
+* 新增工具：`tools/build-mod.ps1`、`tools/verify-dist.ps1`、`tools/backup.ps1`。
+* 新增文档：`README.md`、`VERSIONING.md`、`CHANGELOG.md`、`docs/PROTOCOL.md`、`docs/DEPLOY.md`。
+* 新增 `dist/SHA256SUMS.txt`。
+
+**验证**：移动后重新执行 `gradlew.bat build` → **BUILD SUCCESSFUL**（18 秒）；
+新产物与原成品逐类比对，**除 `META-INF/MANIFEST.MF` 里的构建时间戳外完全一致**（所有 .class 哈希相同）。
+
+**技术决策（同日）**：查到「矩形区域（包 2/3）的世界名是 Bukkit 短名 `world`，
+多边形/传送点/怪物（包 6/7/9）是命名空间 `minecraft:overworld`，客户端严格比较」的问题。
+逐条核实后确认**影响面只有小地图上「当前所在区域名」那一行字**（其他绘制路径根本不按世界过滤），
+且多边形路线完好、还能自己画名字。因此**决定不修**，改为**服务端一律用 `shape: polygon` 配区域**
+（4 个顶点的多边形即矩形）。详见 [`docs/PROTOCOL.md` 第 5.1 节](docs/PROTOCOL.md)。
+另附带记录一个上游原有行为：绘制不看世界，配在 `world` 的矩形在下界/末地也会被画出来。
+
+**回滚**：整理前的完整状态在 `backups/MMmap_20260917_151316_01-整理前基线.zip`。
+
+---
+
+## Forge 移植版 1.9.5 · 2026-09-17
+
+**把上游 Fabric 客户端模组 `mmap-1.9.5.jar` 移植成 Forge 47.4.10 客户端模组。**
+
+* 新增 `mod-forge/` 完整 Gradle 工程，产物 `dist/client-mod/mmap-forge-1.9.5.jar`。
+* 移植方式：intermediary → Mojang 官方映射（68666 成员 / 7423 类，解析率 100%）→ tiny-remapper
+  重映射 → Vineflower 反编译 → 只改写 Fabric API 相关部分，渲染与解析逻辑 1:1 保留。
+* 关键替换：`@Mod` 入口、`RegisterKeyMappingsEvent`、`TickEvent.ClientTickEvent`、
+  `ClientPlayerNetworkEvent.LoggingOut`、`RenderGuiEvent.Post`、Forge `SimpleChannel`（复用插件的包类型首字节）、
+  **彻底去掉 Mixin**，本地指令改用 `RegisterClientCommandsEvent`。
+* 服务端**无需任何改动**，继续用插件 1.9.4；协议保持 v1。
+
+**验证情况**：
+
+* ✅ `gradle build` 干净编译通过（所有 MC / Forge API 调用都在真实 1.20.1-47.4.10 类上解析成功）。
+* ✅ `reobfJar` 正常执行，产物里 Minecraft 成员已转成 SRG 名。
+* ✅ 专用服务器能加载（`mods.toml`、`@Mod` 构造、不误加载客户端类）。
+* ✅ jar 已装入 Forge 1.20.1-47.4.10 客户端实例 `自用客户端\.minecraft\versions\时之旅者\mods\`。
+* ✅ **2026-09-17 14:14 已在 时之旅者（Forge）实例实机跑过一次，与 Paper 服务端联调成功**，日志证据：
+  * `Found valid mod file mmap-forge-1.9.5.jar with {mmap} mods - versions {1.9.5}`（Forge 认出了模组）
+  * `已注册网络包接收器，通道: mmap:main` + `Channel 'mmap:main' : Vanilla acceptance test: ACCEPTED`
+  * `收到服务端握手 - 协议版本: 1, 标识: MMmap-Server, 传送点消失阈值: 0.8, 当前世界: world, 怪物头颅fallback: true`
+  * `已同步 2 个地图图片绑定` / `已同步 1 个多边形区域`（**0 个矩形区域、0 个传送点**，服务器就是这么配的）
+  * `已加载地图图片: main.mmap (543x575) -> mmap:map_image/main_map [CLAMP_TO_EDGE] glId=60`（图片成功上传成 GL 纹理）
+  * 大地图打开过并持久化了缩放（`config\mmap.json` 里 `lastZoom` 有值）
+* ✅ **2026-09-17 使用者实机确认**：从 Fabric 版转到 Forge 版**没有问题**，画面表现一致
+  （小地图/大地图绘制、传送点、怪物头颅等）。
+* ✅ 同日已把重建后的 jar 部署到 Forge 实例 `versions\时之旅者\mods\`，与 `dist\` 哈希一致。
+* ⚠️ 已知问题见 [`docs/DEPLOY.md` 第 5 节](docs/DEPLOY.md)：
+  Forge 客户端第二次连 Paper 服务端时会报 `Duplicate handler name: forge:vanilla_filter`
+  （Forge 自身的网络过滤器重复注入，堆栈里没有 mmap 代码，实测不影响功能）；
+  以及 [`docs/PROTOCOL.md` 第 5 节](docs/PROTOCOL.md) 记录的「矩形区域世界名格式不一致」潜在 bug。
+
+---
+
+## 服务端插件 1.9.4 · 2026-08-10
+
+* 服务端 Paper 1.20.1 插件成品进入本工作区，只有编译好的 jar，**没有可编译的源码工程**
+  （反编译源码在 `archive/port-work/src-plugin/`，仅供阅读）。
+* 协议 v1：通道 `mmap:main`，包类型 1~9。
+* 已知行为：插件按 `plugins/MMmap/` 下的 yml 组织数据（`config.yml`、`language.yml`、`images.yml`、
+  `regions/`、`warps/`），支持文件夹形式分文件管理。
+
+---
+
+## Fabric 上游原版 1.9.5 · 2026-08-10
+
+* 上游 Fabric 客户端模组 `mmap-1.9.5.jar` 进入本工作区，作为移植基准保留，
+  现存放为 `dist/client-mod/mmap-fabric-1.9.5.jar`。**这份文件不做任何修改。**
+
+---
+
+## 历史遗留信息（整理时记录，来源为文件时间戳与原有说明）
+
+* 更早的 1.9.3 版本：插件 `config.yml` 里注明了「已清理 v1.9.3：移除全部无用的旧配置
+  （区块颜色/同步距离/自动保存/日志开关，代码均未读取）」。
+* 上游 Fabric 版与插件的更早版本、以及本工作区之外的改动历史目前**没有记录**
+  （本机没装 Git，之前也没有变更日志）。
