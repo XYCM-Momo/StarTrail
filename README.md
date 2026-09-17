@@ -11,10 +11,10 @@ MMmap = **Minecraft 客户端地图模组**（小地图 / 大地图 / 区域 / �
 
 | 组件 | 版本 | 成品文件 | 状态 |
 |---|---|---|---|
-| Forge 客户端模组 | **1.9.5** | `dist/client-mod/mmap-forge-1.9.5.jar` | ✅ **已实机验证**：加载/联网/图片/画面都正常 |
+| Forge 客户端模组 | **1.9.6** | `dist/client-mod/mmap-forge-1.9.6.jar` | ✅ 已实机验证；1.9.6 修了「开聊天栏小地图消失」 |
 | Fabric 客户端模组（上游原版） | **1.9.5** | `dist/client-mod/mmap-fabric-1.9.5.jar` | 原样保留，未做任何改动 |
 | 服务端 Paper 插件 | **1.9.4** | `dist/server-plugin/MMmap-Plugin-1.9.4.jar` | ✅ **已有源码工程** `plugin-paper/`，可自己编译发布 |
-| 网络协议 | **v1** | [`docs/PROTOCOL.md`](docs/PROTOCOL.md) | 插件 1.9.4 ↔ 两个平台的模组 1.9.5 一致 |
+| 网络协议 | **v1** | [`docs/PROTOCOL.md`](docs/PROTOCOL.md) | 插件 1.9.4 ↔ 两个平台的模组一致（协议未变） |
 
 三者可以互相独立升级，只要协议（包类型号 + 字段顺序）不变。规则见 [`VERSIONING.md`](VERSIONING.md)。
 
@@ -28,7 +28,7 @@ MMmap/
 │
 ├─ dist/                      ★ 成品区：要拿到游戏里用的 jar 都从这里取
 │  ├─ client-mod/
-│  │  ├─ mmap-forge-1.9.5.jar        Forge 客户端模组（MC 1.20.1 / Forge 47.x）
+│  │  ├─ mmap-forge-1.9.6.jar        Forge 客户端模组（MC 1.20.1 / Forge 47.x）★ 当前在用
 │  │  └─ mmap-fabric-1.9.5.jar       Fabric 客户端模组（上游原版，MC 1.20.1 / Fabric）
 │  ├─ server-plugin/
 │  │  └─ MMmap-Plugin-1.9.4.jar      服务端 Paper 插件

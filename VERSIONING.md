@@ -19,7 +19,7 @@ MMmap 由两个可独立升级的部件组成，各自有自己的版本号，**
 
 | 平台 | 文件名格式 | 例 |
 |---|---|---|
-| Forge | `mmap-forge-<版本>.jar` | `mmap-forge-1.9.5.jar` |
+| Forge | `mmap-forge-<版本>.jar` | `mmap-forge-1.9.6.jar` |
 | Fabric | `mmap-fabric-<版本>.jar` | `mmap-fabric-1.9.5.jar` |
 | 服务端插件 | `MMmap-Plugin-<版本>.jar` | `MMmap-Plugin-1.9.4.jar` |
 
@@ -60,7 +60,8 @@ Gradle 构建出来的原始文件名叫 `mmap-<版本>.jar`（`archivesName = m
 
 | | 插件 1.9.4（协议 1） |
 |---|---|
-| Forge 模组 1.9.5（协议 1） | ✅ 兼容 |
+| Forge 模组 **1.9.6**（协议 1） | ✅ 兼容（当前在用） |
+| Forge 模组 1.9.5（协议 1） | ✅ 兼容（已归档在 `releases/mod-1.9.5_plugin-1.9.4/`） |
 | Fabric 模组 1.9.5（协议 1） | ✅ 兼容 |
 
 ## 6. 发布流程（照做即可）

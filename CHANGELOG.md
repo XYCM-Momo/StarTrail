@@ -11,6 +11,37 @@
 
 ---
 
+## Forge 移植版 1.9.6 · 2026-09-17
+
+**修复：打开聊天栏（以及其它界面）时小地图消失。**
+
+* ⚠️ **需要玩家更新客户端模组**（`mmap-forge-1.9.6.jar`）。
+  **服务端插件与协议不变，服务端不用动。** Fabric 版仍是 1.9.5（这次只改了 Forge 侧）。
+* **原因**：`MinimapManager` 里有一句「只要开着界面就不画小地图」（继承自上游 Fabric 模组的行为）。
+  而 Forge 的 `RenderGuiEvent.Post` 在开着界面时**照样会触发** ——
+  `GameRenderer` 里是 `if (!hideGui || screen != null) gui.render(...)`，
+  这正是「聊天栏打开时快捷栏仍然可见」的原因；界面本身是在 HUD 之后才画的。
+  所以小地图是被自己那行判断挡掉的，不是引擎不画。
+* **改法**：默认**一直显示小地图**，只在本模组自己的大地图界面隐藏；
+  新增配置项 `minimap.hideInGui`（`config/mmap.json`，默认 `false`）可切回旧行为。
+  改动文件：`MinimapManager.java`（渲染判断）、`ConfigManager.java`（新增配置字段）。
+  渲染细节、网络协议、服务端逻辑均未改动。
+* 新增配置项在旧配置文件里不存在时会自动取默认值（Gson 走无参构造，字段初始值生效），
+  无需手动改 `config/mmap.json`。
+
+**验证**：
+
+* ✅ `gradlew clean build` 编译通过，产物 `mmap-forge-1.9.6.jar`（`F47099C3…`）。
+* ✅ jar 内 `mods.toml` 的 `version="1.9.6"` 正确。
+* ✅ 已部署到 Forge 实例 `versions\时之旅者\mods\`，并**删除了旧的 1.9.5 jar**
+  （同一 modId 放两个 jar 会导致加载失败），部署后哈希与 `dist/` 一致。
+* ⚠️ **待使用者实机确认**：打开聊天栏 / 背包 / ESC 菜单时小地图是否按预期保留。
+
+**产物变化**：`dist/client-mod/` 里换成 `mmap-forge-1.9.6.jar`，
+旧的 `mmap-forge-1.9.5.jar` 已移出 dist（冻结在 `releases/mod-1.9.5_plugin-1.9.4/` 里可回滚）。
+
+---
+
 ## 2026-09-17 · 安装 Git、部署重建模组、实机确认（不涉及版本号）
 
 * **安装 Git** 2.55.0 到 `D:\Git`（仅当前用户、无需管理员；配置全部写在 `D:\Git\etc\gitconfig`，

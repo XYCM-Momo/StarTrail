@@ -23,7 +23,7 @@ PCL 这三个实例都开了**版本隔离**，也就是「游戏目录」= `ver
 
 | 放什么 | 放到哪 |
 |---|---|
-| 模组 jar | `...\.minecraft\versions\时之旅者\mods\mmap-forge-1.9.5.jar` |
+| 模组 jar | `...\.minecraft\versions\时之旅者\mods\mmap-forge-1.9.6.jar` |
 | 地图图片 | `...\versions\时之旅者\mmap\map\`（文件名要和插件里配的 `fileName` 对上） |
 | 传送点图标 | `...\versions\时之旅者\mmap\legend\` |
 | MythicMobs 头颅 | `...\versions\时之旅者\mmap\mm\` |
@@ -31,8 +31,8 @@ PCL 这三个实例都开了**版本隔离**，也就是「游戏目录」= `ver
 
 ```powershell
 # 部署 = 从 dist 复制过去（覆盖旧的）
-$src = "E:\Minecraft\服务器\插件\MMmap\dist\client-mod\mmap-forge-1.9.5.jar"
-$dst = "E:\Minecraft\服务器\自用客户端\.minecraft\versions\时之旅者\mods\mmap-forge-1.9.5.jar"
+$src = "E:\Minecraft\服务器\插件\MMmap\dist\client-mod\mmap-forge-1.9.6.jar"
+$dst = "E:\Minecraft\服务器\自用客户端\.minecraft\versions\时之旅者\mods\mmap-forge-1.9.6.jar"
 Copy-Item $src $dst -Force
 # 核对是不是同一个文件
 (Get-FileHash $src).Hash -eq (Get-FileHash $dst).Hash

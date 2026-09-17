@@ -140,6 +140,8 @@ public class ConfigManager {
       public float regionBorderWidth = 2.0F;
       public int chunkUpdateInterval = 5;
       public boolean caveMode = false;
+      /** true = hide the minimap while a GUI is open (chat, inventory, ...); false = keep it visible (the world map screen always hides it). */
+      public boolean hideInGui = false;
 
       public MinimapConfig() {
       }
