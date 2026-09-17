@@ -19,8 +19,8 @@
   纳管范围见 `.gitignore`：源码/资源/文档/`dist/`/`releases/`/`tools/` 进库，
   `backups/`、两个工程的 `build/` 与 `.gradle/`、`archive/port-work/` 里的大二进制不进库
   —— 所以 **Git 不能替代 `backups/`**。
-  提交身份目前是占位的 `MMmap Workspace <mmap@localhost>`，要改成自己的跑
-  `git config user.name/user.email`。
+  提交身份：**`XY_Momo <1756784800@qq.com>`**（本仓库与系统级都已设置；系统级那份在
+  `D:\Git\etc\gitconfig`，以后新建的仓库也用它）。首次提交时的占位身份已一并改写为它。
 * **部署重建后的 Forge 模组**到 `versions\时之旅者\mods\mmap-forge-1.9.5.jar`，
   与 `dist/` 哈希一致（`C990704B…`）。部署前的旧文件留档在
   `backups\_deployed-old-mmap-forge-1.9.5.jar`（不在快照范围内，是单独留的）。

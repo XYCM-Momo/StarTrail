@@ -162,11 +162,9 @@ git diff                 # 看改了什么
 git checkout -- <文件>   # 丢掉某个文件的改动
 ```
 
-* **提交身份**：首次提交用的是占位身份。换成你自己的：
-  ```powershell
-  git config user.name  "你的名字"
-  git config user.email "你的邮箱"
-  ```
+* **提交身份**：`XY_Momo <1756784800@qq.com>`
+  （本仓库与系统级都写了；系统级那份在 `D:\Git\etc\gitconfig`，所以以后新建的仓库也用它）。
+  要换的话：`git config user.name "..."` / `git config user.email "..."`。
 * **谁被纳管**：源码、资源、文档、`dist/` 成品、`releases/` 冻结件、`tools/` 脚本。
 * **谁不被纳管**（体积大或可重新生成，见 `.gitignore`）：`backups/`、两个工程的 `build/` 与 `.gradle/`、
   `archive/port-work/` 里的映射表和大 jar、解包出来的 `x-mod/` `x-plugin/`。
