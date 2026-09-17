@@ -84,7 +84,7 @@ if ($Prune) {
 # ---- 要排除的相对路径前缀（统一用反斜杠、大小写不敏感比较）----
 $exclude = @('backups\')
 if (-not $IncludeBuild) {
-    $exclude += @('mod-forge\build\', 'mod-forge\.gradle\')
+    $exclude += @('mod-forge\build\', 'mod-forge\.gradle\', 'plugin-paper\build\', 'plugin-paper\.gradle\')
 }
 
 $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'

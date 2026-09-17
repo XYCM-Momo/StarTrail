@@ -11,6 +11,23 @@
 
 ---
 
+## 2026-09-17 · 安装 Git、部署重建模组、实机确认（不涉及版本号）
+
+* **安装 Git** 2.55.0 到 `D:\Git`（仅当前用户、无需管理员；配置全部写在 `D:\Git\etc\gitconfig`，
+  C 盘只有一条 PATH 环境变量），并把 `D:\Git\cmd` 加入用户 PATH。
+* **工作区纳入版本控制**：`git init`（分支 `main`），首次提交 216 个文件。
+  纳管范围见 `.gitignore`：源码/资源/文档/`dist/`/`releases/`/`tools/` 进库，
+  `backups/`、两个工程的 `build/` 与 `.gradle/`、`archive/port-work/` 里的大二进制不进库
+  —— 所以 **Git 不能替代 `backups/`**。
+  提交身份目前是占位的 `MMmap Workspace <mmap@localhost>`，要改成自己的跑
+  `git config user.name/user.email`。
+* **部署重建后的 Forge 模组**到 `versions\时之旅者\mods\mmap-forge-1.9.5.jar`，
+  与 `dist/` 哈希一致（`C990704B…`）。部署前的旧文件留档在
+  `backups\_deployed-old-mmap-forge-1.9.5.jar`（不在快照范围内，是单独留的）。
+* **使用者实机确认**：Forge 版画面正常，从 Fabric 版迁移没有问题。
+
+---
+
 ## 2026-09-17 · 建立服务端插件源码工程（不涉及版本号）
 
 **改动**：新增 `plugin-paper/` —— 服务端插件 `MMmap-Plugin-1.9.4.jar` 的 Gradle 工程。
