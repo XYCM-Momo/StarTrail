@@ -1,0 +1,33 @@
+# ==================== MMmap 地图图片绑定配置 ====================
+#
+# 在此文件中添加/编辑图片绑定，然后执行 /mmap reload 重新加载
+#
+# 字段说明：
+#   fileName: 客户端 .minecraft/mmap/map/ 目录下的图片文件名（v1.9.3 起图片目录在 .minecraft/mmap/）
+#   world:    所属世界名（如 world, world_nether, world_the_end）
+#   minX, minZ: 图片左上角（西北角）对应的游戏方块坐标
+#   maxX, maxZ: 图片右下角（东南角）对应的游戏方块坐标
+#
+# 坐标方向：
+#   - X 增大 = 东，Z 增大 = 南
+#   - 图片上边 = 北方（Z 小），图片左边 = 西方（X 小）
+#
+# ============================================================
+
+images:
+  # 主世界地图（迁移自测试服，坐标需与正式服世界实际渲染图一致，如不符请修改）
+  main_map:
+    fileName: main.png
+    world: world
+    minX: -297
+    minZ: -320
+    maxX: 246
+    maxZ: 255
+  # DungeonPlus 副本地图（前缀匹配 dungeon_Main-2_XXX）
+  dungeon_Main-2:
+    fileName: Main-2.png
+    world: dungeon_Main-2
+    minX: -17
+    minZ: 329
+    maxX: 1018
+    maxZ: 1279
