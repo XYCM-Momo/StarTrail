@@ -23,22 +23,27 @@ PCL 这三个实例都开了**版本隔离**，也就是「游戏目录」= `ver
 
 | 放什么 | 放到哪 |
 |---|---|
-| 模组 jar | `...\.minecraft\versions\时之旅者\mods\mmap-forge-1.9.6.jar` |
+| 模组 jar | `...\.minecraft\versions\时之旅者\mods\mmap-forge-<版本>.jar`（当前 1.9.7） |
 | 地图图片 | `...\versions\时之旅者\mmap\map\`（文件名要和插件里配的 `fileName` 对上） |
 | 传送点图标 | `...\versions\时之旅者\mmap\legend\` |
 | MythicMobs 头颅 | `...\versions\时之旅者\mmap\mm\` |
 | 模组配置 | `...\versions\时之旅者\config\mmap.json`（首次启动自动生成） |
 
 ```powershell
-# 部署 = 从 dist 复制过去（覆盖旧的）
-$src = "E:\Minecraft\服务器\插件\MMmap\dist\client-mod\mmap-forge-1.9.6.jar"
-$dst = "E:\Minecraft\服务器\自用客户端\.minecraft\versions\时之旅者\mods\mmap-forge-1.9.6.jar"
-Copy-Item $src $dst -Force
-# 核对是不是同一个文件
-(Get-FileHash $src).Hash -eq (Get-FileHash $dst).Hash
+# 部署 = 取 dist 里最新的那个模组 jar 复制过去，并删掉 mods 里的旧版本
+# （同一个 mod id 放两个 jar 会加载失败）
+$root = "E:\Minecraft\服务器\插件\MMmap"
+$mods = "E:\Minecraft\服务器\自用客户端\.minecraft\versions\时之旅者\mods"
+$src  = (Get-ChildItem "$root\dist\client-mod\mmap-forge-*.jar" | Sort-Object LastWriteTime -Desc | Select-Object -First 1).FullName
+$name = Split-Path $src -Leaf
+Get-ChildItem $mods -Filter 'mmap-forge-*.jar' | Where-Object Name -ne $name | Remove-Item -Force
+Copy-Item $src (Join-Path $mods $name) -Force
+# 核对
+(Get-FileHash $src).Hash -eq (Get-FileHash (Join-Path $mods $name)).Hash
 ```
 
-> 换版本号时记得把旧版本的 jar 从 `mods\` 里**删掉**，同一个 mod id 放两个 jar 会加载失败。
+> ⚠️ **换版本号时务必删掉旧版本的 jar**，同一个 mod id 放两个 jar 会加载失败。上面的脚本已经处理了。
+> 替换前先确认**游戏没在运行**（运行中 jar 被占用，复制会失败）。
 
 **按键**：`M` 开大地图；小地图默认没绑键，去「选项 → 按键设置 → MMmap」自己绑。
 **本地指令**：`/mmap crypt`、`/mmap crypt delete`、`/mmap crypt help`（别名 `map` / `mmap` / `minimap`）。

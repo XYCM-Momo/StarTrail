@@ -11,7 +11,7 @@ MMmap = **Minecraft 客户端地图模组**（小地图 / 大地图 / 区域 / �
 
 | 组件 | 版本 | 成品文件 | 状态 |
 |---|---|---|---|
-| Forge 客户端模组 | **1.9.6** | `dist/client-mod/mmap-forge-1.9.6.jar` | ✅ 已实机验证；1.9.6 修了「开聊天栏小地图消失」 |
+| Forge 客户端模组 | **1.9.7** | `dist/client-mod/mmap-forge-1.9.7.jar` | 修了「开聊天栏小地图消失」+「图片边界偏 1 格」；**待部署/实机确认** |
 | Fabric 客户端模组（上游原版） | **1.9.5** | `dist/client-mod/mmap-fabric-1.9.5.jar` | 原样保留，未做任何改动 |
 | 服务端 Paper 插件 | **1.9.4** | `dist/server-plugin/MMmap-Plugin-1.9.4.jar` | ✅ **已有源码工程** `plugin-paper/`，可自己编译发布 |
 | 网络协议 | **v1** | [`docs/PROTOCOL.md`](docs/PROTOCOL.md) | 插件 1.9.4 ↔ 两个平台的模组一致（协议未变） |
@@ -28,7 +28,7 @@ MMmap/
 │
 ├─ dist/                      ★ 成品区：要拿到游戏里用的 jar 都从这里取
 │  ├─ client-mod/
-│  │  ├─ mmap-forge-1.9.6.jar        Forge 客户端模组（MC 1.20.1 / Forge 47.x）★ 当前在用
+│  │  ├─ mmap-forge-1.9.7.jar        Forge 客户端模组（MC 1.20.1 / Forge 47.x）★ 当前在用
 │  │  └─ mmap-fabric-1.9.5.jar       Fabric 客户端模组（上游原版，MC 1.20.1 / Fabric）
 │  ├─ server-plugin/
 │  │  └─ MMmap-Plugin-1.9.4.jar      服务端 Paper 插件

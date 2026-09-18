@@ -22,7 +22,7 @@
 
 | 文件 | 说明 |
 |---|---|
-| `../dist/client-mod/mmap-forge-1.9.6.jar` | 编译好的 **Forge 客户端模组**，放进 Forge 客户端的 `mods/` |
+| `../dist/client-mod/mmap-forge-<版本>.jar`（当前 1.9.7） | 编译好的 **Forge 客户端模组**，放进 Forge 客户端的 `mods/` |
 | `mod-forge/`（本目录） | 完整的 Forge 工程源码（可自行修改、重新编译） |
 | `../dist/server-plugin/MMmap-Plugin-1.9.4.jar` | 服务器插件，**保持不变**，继续放在服务端 `plugins/` |
 

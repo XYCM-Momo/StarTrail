@@ -152,10 +152,26 @@ public class WorldMapScreen extends Screen {
                if (tex != null && tex.isReady()) {
                   int imageWidth = tex.getImageWidth();
                   int imageHeight = tex.getImageHeight();
-                  float screenX1 = this.worldToScreenX((double)((float)image.getMinX() + 1.0F));
-                  float screenY1 = this.worldToScreenY((double)((float)image.getMinZ() + 1.0F));
-                  float screenX2 = this.worldToScreenX((double)((float)(image.getMinX() + imageWidth) + 1.0F));
-                  float screenY2 = this.worldToScreenY((double)((float)(image.getMinZ() + imageHeight) + 1.0F));
+                  // 图片画在配置的矩形里：西/北边缘 = minX/minZ，东/南边缘 = maxX/maxZ，
+                  // 纹理拉伸铺满这个矩形（1 像素 = 1 格的配置下不会有任何拉伸）。
+                  //
+                  // 旧代码这里写的是 minX + 1 / minZ + 1，导致整张图往东/南偏 1 格，
+                  // 玩家只能在配置里把四个值统统 -1 来抵消。已修正为直接使用配置值。
+                  // 与之配套：小地图那边（MinimapImageRenderer）本来就是按 minX..maxX 映射 UV 的，
+                  // 所以修正后两个视图才会一致。
+                  int spanX = image.getMaxX() - image.getMinX();
+                  int spanZ = image.getMaxZ() - image.getMinZ();
+                  if (spanX <= 0) {
+                     // 配置的跨度不合理（比如只填了 minX/minZ），退回按图片像素尺寸铺
+                     spanX = imageWidth;
+                  }
+                  if (spanZ <= 0) {
+                     spanZ = imageHeight;
+                  }
+                  float screenX1 = this.worldToScreenX(image.getMinX());
+                  float screenY1 = this.worldToScreenY(image.getMinZ());
+                  float screenX2 = this.worldToScreenX(image.getMinX() + spanX);
+                  float screenY2 = this.worldToScreenY(image.getMinZ() + spanZ);
                   if (!(screenX2 < 0.0F) && !(screenX1 > (float)this.width) && !(screenY2 < 0.0F) && !(screenY1 > (float)this.height)) {
                      RenderSystem.bindTexture(tex.getGlTextureId());
                      RenderSystem.setShaderTexture(0, tex.getTextureId());
