@@ -64,7 +64,8 @@ E50716B1A7D6BBA89E66C45DCA2AA42ED97EEB1630E89CAC5AA5F28761170161  mmap-forge-1.9
 * ✅ `gradlew clean build` 编译通过（产物 `mmap-forge-1.9.7.jar`）。
 * ✅ 已核对 `main.png` 真实像素尺寸为 860×860（AES 解密后读 PNG IHDR），
   与使用者给出的真实边界跨度 860×860 完全一致。
-* ⏳ **尚未部署**：打包时使用者正在游戏内（jar 被占用），等关掉游戏后再覆盖 `mods\`。
+* ✅ **已部署**：使用者关闭游戏后自动替换到 `自用客户端\.minecraft\versions\时之旅者\mods\`
+  （旧 `mmap-forge-1.9.6.jar` 已删除），部署后哈希与 `dist/` 一致：`E50716B1…`。
 * ⚠️ 待实机确认：改用真实边界后图片是否与地形完全对齐。
 
 ## 回滚方式

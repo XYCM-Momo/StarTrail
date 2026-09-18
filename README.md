@@ -11,7 +11,7 @@ MMmap = **Minecraft 客户端地图模组**（小地图 / 大地图 / 区域 / �
 
 | 组件 | 版本 | 成品文件 | 状态 |
 |---|---|---|---|
-| Forge 客户端模组 | **1.9.7** | `dist/client-mod/mmap-forge-1.9.7.jar` | 修了「开聊天栏小地图消失」+「图片边界偏 1 格」；**待部署/实机确认** |
+| Forge 客户端模组 | **1.9.7** | `dist/client-mod/mmap-forge-1.9.7.jar` | 修了「开聊天栏小地图消失」+「图片边界偏 1 格」；**已部署，待实机确认对齐** |
 | Fabric 客户端模组（上游原版） | **1.9.5** | `dist/client-mod/mmap-fabric-1.9.5.jar` | 原样保留，未做任何改动 |
 | 服务端 Paper 插件 | **1.9.4** | `dist/server-plugin/MMmap-Plugin-1.9.4.jar` | ✅ **已有源码工程** `plugin-paper/`，可自己编译发布 |
 | 网络协议 | **v1** | [`docs/PROTOCOL.md`](docs/PROTOCOL.md) | 插件 1.9.4 ↔ 两个平台的模组一致（协议未变） |
