@@ -50,7 +50,10 @@ StarTrail/
 │  ├─ WORKSPACE.md            ← 你在这里
 │  ├─ 移植说明.md             Fabric→Forge 移植的来龙去脉与关键改动
 │  ├─ PROTOCOL.md             网络协议 v1 逐包字段表（改协议前必读）
-│  └─ DEPLOY.md               部署清单：装到哪个客户端 / 服务端、怎么验证
+│  ├─ DEPLOY.md               部署清单：装到哪个客户端 / 服务端、怎么验证
+│  └─ sessions/               ★ 开发对话归档（详见第 6 节）
+│     ├─ 2026-09-18至2026-10-14_星轨开发全程对话.md   可读的对话记录
+│     └─ raw/                 逐字原始记录（session.v4.jsonl.zstd）
 │
 ├─ tools/
 │  ├─ jdk-17.0.20.1+1         工作区自带的 JDK 17（构建用，约 300MB，不进 Git/快照）
@@ -59,7 +62,8 @@ StarTrail/
 │  ├─ smoke-test-plugin.ps1   一次性 Paper 服冒烟测试插件（不动线上服务端）
 │  ├─ verify-dist.ps1         列出/刷新/校验 dist 成品的 SHA256
 │  ├─ backup.ps1              整个工作区打包快照到 backups\
-│  └─ waypoint-editor/        网页版点位编辑器（含启动脚本与测试）
+│  ├─ waypoint-editor/        网页版点位编辑器（含启动脚本与测试）
+│  └─ export-session.mjs      ★ 把 DSH 会话记录导出成可读 Markdown（见第 6 节）
 │
 ├─ backups/                   快照备份（自动排除 build\、.gradle\、.gradle-home\、JDK、backups\ 自身）
 │
@@ -177,7 +181,39 @@ git push
   `archive/port-work/` 里的映射表与大 jar（解包出来的 `x-mod/` `x-plugin/`）。
   → 所以 **Git 不能替代 `backups/`**：要回滚「整个工作区（含中间产物）」还是用 zip 快照。
 
-## 6. 还没做的事（待办）
+## 6. 会话记录（开发对话归档）
+
+本项目的开发过程是在 DSH（DeepSeek Harness）里进行的，会话记录可以导出成可读文档放进
+`docs/sessions/`，作为「当时为什么这么改」的一手材料 —— 代码只说明结果，对话才说明原因。
+
+- `docs/sessions/2026-09-18至2026-10-14_星轨开发全程对话.md`
+  2026-09-18 ~ 2026-10-14 的完整开发对话（55 条用户消息、564 条助手回复、894 次工具调用）。
+  工具调用与输出折叠在 `<details>` 里、超长部分截断，用户与助手的原话保持原样。
+- `docs/sessions/raw/session-*.jsonl.zstd`
+  逐字原始记录，含被折叠、被截断、以及内部推理的全部内容。**只有它是完整的**，
+  上面那份 Markdown 是它的可读视图。两者一起提交进 Git，所以仓库里的记录是自洽的。
+
+### 导出方式（以后有新会话照做即可）
+
+```powershell
+# 1. 列出本机所有会话记录，找到目标会话（按修改时间排序看最新的即可）
+node tools\export-session.mjs --list
+
+# 2. 导出成 Markdown（上一步会打印完整路径，直接照抄）
+node tools\export-session.mjs "$env:USERPROFILE\.dsh\sessions\<工作区转义名>\<会话ID>\session.v4.jsonl.zstd" docs\sessions\<文件名>.md
+
+# 3. 顺手把原始记录也归档一份
+Copy-Item "$env:USERPROFILE\.dsh\sessions\<工作区转义名>\<会话ID>\session.v4.jsonl.zstd" docs\sessions\raw\
+```
+
+> ⚠️ **别用普通解压工具打开这些 `.jsonl.zstd`**。DSH 是「每条记录追加一个 zstd 帧」写进同一个
+> 文件的，常见解压（Node 的 `zstdDecompressSync`、`zstd -d` 等）只解第一个帧，会得到一两百字节
+> 的会话头就结束，看起来像是文件坏了 —— 其实是没解完。`export-session.mjs` 自己按 zstd 帧结构
+> 逐帧遍历，所以能全部解出来。
+>
+> 另外：同一会话目录里可能同时存在 `session.jsonl.zstd`（旧格式，v0）和 `session.v4.jsonl.zstd`
+> （新格式）。旧格式那份**时间上是残缺的**（我们的例子里它 2026-09-21 就停写了），**优先用 v4 那份**。
+## 7. 还没做的事（待办）
 
 - [x] ~~服务端插件没有源码工程~~ → ✅ 已建好 `plugin-paper/`，并通过等价性验证与冒烟测试。
 - [x] ~~Forge 模组画面细节没确认~~ → ✅ 使用者实机确认：从 Fabric 版转过来**没有问题**。
