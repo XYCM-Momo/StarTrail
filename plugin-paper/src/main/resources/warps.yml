@@ -1,22 +1,22 @@
-# MMmap 传送点配置默认模板(v1.7.2+)
+# StarTrail 传送点配置默认模板(v1.7.2+)
 #
-# v1.7.2 起, 传送点配置改为文件夹形式: plugins/MMmap/warps/*.yml
+# v1.7.2 起, 传送点配置改为文件夹形式: plugins/StarTrail/warps/*.yml
 #   - 单个 yml 可放一个或多个传送点
 #   - 单个 yml 单传送点: 顶层直接是字段(name/world/... 见下), id = 文件名(不含 .yml)
 #   - 单个 yml 多传送点: 顶层用 warps: 段(或其它任意段名), 段下每个 key 是一个传送点,
 #                         id = "<file>.<段内 key>", 避免不同文件 id 冲突
 # 文件名自己取, 不影响加载(只要 .yml 后缀)。
-# 修改后执行 /mmap reload 即可推送给客户端。
+# 修改后执行 /startrail reload 即可推送给客户端。
 #
 # 字段说明:
 #   id:        唯一标识(单传送点模式 = 文件名; 多传送点模式 = "<file>.<key>")
 #   name:      显示在地图上的名字
 #   world:     世界名(Bukkit 短名, 如 "world")
 #   x, y, z:   方块坐标(block 索引, 玩家站在哪里就填哪里)
-#   iconKey:   图标文件名(不含 .png)。客户端从 .minecraft/config/mmap/images/ 加载
+#   iconKey:   图标文件名(不含 .png)。客户端从 .minecraft/config/startrail/images/ 加载
 #              留空或省略则默认为 "传送点"
 #   descr:     描述文本(可选)。客户端在大地图选中此传送点时, 弹窗会显示这段描述。
-#              这里是用户自定义的描述, 直接改 yml 文件 + /mmap reload 生效。
+#              这里是用户自定义的描述, 直接改 yml 文件 + /startrail reload 生效。
 #
 # === 示例 1: 单传送点文件 spawn.yml ===
 # name: "主城"

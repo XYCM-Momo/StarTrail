@@ -6,7 +6,7 @@
 .DESCRIPTION
     1. 从 mod-forge\gradle.properties 读出版本号（mod_version）；
     2. 调用 mod-forge\gradlew.bat build；
-    3. 把 build\libs\mmap-<版本>.jar 复制成 dist\client-mod\mmap-forge-<版本>.jar；
+    3. 把 build\libs\startrail-<版本>.jar 复制成 dist\client-mod\startrail-forge-<版本>.jar；
     4. 刷新 dist\SHA256SUMS.txt。
 
     版本号只认 gradle.properties 里的 mod_version 一处，改版本请改那里（见 VERSIONING.md）。
@@ -68,7 +68,7 @@ finally {
 }
 if ($code -ne 0) { throw "Gradle 构建失败，退出码 $code" }
 
-$built = Join-Path $Proj ("build\libs\mmap-{0}.jar" -f $Version)
+$built = Join-Path $Proj ("build\libs\startrail-{0}.jar" -f $Version)
 if (-not (Test-Path $built)) { throw "构建产物不存在: $built" }
 
 Write-Host ''
@@ -77,7 +77,7 @@ Write-Host ("构建成功: {0}  ({1:N0} 字节)" -f $built, (Get-Item $built).Le
 if ($NoPublish) { return }
 
 if (-not (Test-Path $Dist)) { New-Item -ItemType Directory -Path $Dist -Force | Out-Null }
-$target = Join-Path $Dist ("mmap-forge-{0}.jar" -f $Version)
+$target = Join-Path $Dist ("startrail-forge-{0}.jar" -f $Version)
 Copy-Item $built $target -Force
 Write-Host ("已发布: {0}" -f $target) -ForegroundColor Green
 

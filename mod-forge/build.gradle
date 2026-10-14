@@ -58,6 +58,9 @@ dependencies {
 }
 
 tasks.named('processResources', ProcessResources).configure {
+    // The properties are decoded as ISO-8859-1 and carry Chinese as \uXXXX escapes, so the
+    // expanded mods.toml must be written as UTF-8 (the platform default would be GBK on Windows).
+    filteringCharset = 'UTF-8'
     var replaceProperties = [
             minecraft_version      : minecraft_version,
             minecraft_version_range: minecraft_version_range,

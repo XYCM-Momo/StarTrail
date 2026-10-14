@@ -62,7 +62,7 @@ $lines | ForEach-Object { '{0}  {1,9:N0}  {2}  {3}' -f $_.Hash, $_.Size, $_.Time
 
 if ($Write) {
     $header = @(
-        "# MMmap 成品校验清单 (dist\)",
+        "# 星轨 StarTrail 成品校验清单 (dist\)",
         "# 生成时间: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')",
         "# 校验: tools\verify-dist.ps1 -Check",
         ''

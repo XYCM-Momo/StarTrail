@@ -7,7 +7,7 @@ plugins {
 def pluginYmlFile = file('src/main/resources/plugin.yml')
 def versionMatcher = pluginYmlFile.text =~ /(?m)^version:\s*['"]?([^'"\s]+)['"]?\s*$/
 version = versionMatcher.find() ? versionMatcher.group(1) : '0.0.0'
-group = 'com.mmap'
+group = 'com.asterovie.momo.startrail'
 
 // MythicMobs 是付费插件，公共仓库里没有，直接用服务端里那一份来编译
 def mythicJarFile = file(mythicmobs_jar)
@@ -42,13 +42,13 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 tasks.named('jar', Jar).configure {
-    archiveBaseName = 'MMmap-Plugin'
+    archiveBaseName = 'StarTrail-Plugin'
     // 可复现构建：同样源码 => 逐字节相同的 jar（和 mod-forge 保持一致）
     preserveFileTimestamps = false
     reproducibleFileOrder = true
     manifest {
         attributes(
-                'Implementation-Title': 'MMmap Plugin',
+                'Implementation-Title': 'StarTrail Plugin',
                 'Implementation-Version': project.version
         )
     }

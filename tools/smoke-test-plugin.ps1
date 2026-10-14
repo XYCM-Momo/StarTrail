@@ -10,7 +10,7 @@
     用途：改完插件、往线上服务端放之前先跑一遍。放上去崩了可比这麻烦多了。
 
 .PARAMETER PluginJar
-    要测试的插件 jar。默认取 dist\server-plugin\ 里最新的 MMmap-Plugin-*.jar。
+    要测试的插件 jar。默认取 dist\server-plugin\ 里最新的 StarTrail-Plugin-*.jar。
 
 .PARAMETER PaperJar
     Paper 服务端 jar，默认用线上服务端那份（E:\Minecraft\服务器\时旅服务端\Paper-1.20.1.jar）。
@@ -51,7 +51,7 @@ $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
 
 if (-not $PluginJar) {
-    $cand = Get-ChildItem (Join-Path $Root 'dist\server-plugin') -Filter 'MMmap-Plugin-*.jar' -ErrorAction SilentlyContinue |
+    $cand = Get-ChildItem (Join-Path $Root 'dist\server-plugin') -Filter 'StarTrail-Plugin-*.jar' -ErrorAction SilentlyContinue |
             Sort-Object LastWriteTime -Descending | Select-Object -First 1
     if (-not $cand) { throw 'dist\server-plugin 里没有插件 jar，先跑 tools\build-plugin.ps1' }
     $PluginJar = $cand.FullName
@@ -91,7 +91,7 @@ function Read-LogText([string]$path) {
     }
 }
 
-$test = Join-Path $env:TEMP ('mmap-plugin-test-' + (Get-Date -Format 'HHmmss'))
+$test = Join-Path $env:TEMP ('startrail-plugin-test-' + (Get-Date -Format 'HHmmss'))
 New-Item -ItemType Directory $test -Force | Out-Null
 New-Item -ItemType Directory (Join-Path $test 'plugins') -Force | Out-Null
 
@@ -107,7 +107,7 @@ view-distance=4
 simulation-distance=4
 spawn-protection=0
 max-players=5
-motd=MMmap plugin smoke test
+motd=星轨 plugin smoke test
 "@ | Set-Content (Join-Path $test 'server.properties') -Encoding ASCII
 
     $pluginName = Split-Path $PluginJar -Leaf
@@ -128,7 +128,7 @@ motd=MMmap plugin smoke test
                 Copy-Item $mmData (Join-Path $test 'plugins\MythicMobs') -Recurse -Force
                 Write-Host "  并把 MythicMobs 数据目录也复制过去（否则它自己起不来）"
             }
-            else { Write-Host "  警告：没找到 MythicMobs 数据目录，它可能启动失败（那不是 MMmap 的问题）" -ForegroundColor Yellow }
+            else { Write-Host "  警告：没找到 MythicMobs 数据目录，它可能启动失败（那不是 星轨 的问题）" -ForegroundColor Yellow }
         }
         else { Write-Host "没找到 MythicMobs jar，跳过" -ForegroundColor Yellow }
     }
@@ -156,7 +156,7 @@ motd=MMmap plugin smoke test
 
     Write-Host ''
     Write-Host '=== 插件相关日志 ===' -ForegroundColor Cyan
-    $lines | Where-Object { $_ -match 'MMmap' } | ForEach-Object { Write-Host $_ }
+    $lines | Where-Object { $_ -match 'StarTrail' } | ForEach-Object { Write-Host $_ }
 
     # 错误分成两堆：我们自己的（决定成败） vs 别的插件/测试环境的（只提示）
     $errPattern = 'ERROR|Exception|Caused by|Could not load|Failed to load|could not be loaded'
@@ -167,34 +167,35 @@ motd=MMmap plugin smoke test
         $end = [Math]::Min($lines.Count - 1, $i + 8)
         $errBlocks += ($lines[$i..$end] -join "`n")
     }
-    # 含 com.mmap 栈帧、或日志里出现 [MMmap] 且是 ERROR/WARN 的，算我们的问题
-    $ourErr = @($errBlocks | Where-Object { $_ -match 'com\.mmap' })
-    $ourErr += @($lines | Where-Object { $_ -match '\[MMmap\].*(ERROR|WARN|SEVERE)' })
-    $otherErr = @($errBlocks | Where-Object { $_ -notmatch 'com\.mmap' })
+    # 含本插件栈帧（com.asterovie.momo.startrail，兼容旧包名 com.mmap）、或日志里出现 [StarTrail] 且是 ERROR/WARN 的，算我们的问题
+    $ourPkg = 'com\.mmap|com\.asterovie\.momo\.'
+    $ourErr = @($errBlocks | Where-Object { $_ -match $ourPkg })
+    $ourErr += @($lines | Where-Object { $_ -match '\[StarTrail\].*(ERROR|WARN|SEVERE)' })
+    $otherErr = @($errBlocks | Where-Object { $_ -notmatch $ourPkg })
 
     if ($ourErr.Count -gt 0) {
         Write-Host ''
-        Write-Host '=== MMmap 自己的报错（这会导致测试失败）===' -ForegroundColor Red
+        Write-Host '=== 星轨 自己的报错（这会导致测试失败）===' -ForegroundColor Red
         $ourErr | Select-Object -First 10 | ForEach-Object { Write-Host $_ }
     }
     if ($otherErr.Count -gt 0) {
         Write-Host ''
-        Write-Host '=== 其它插件的报错（多为测试环境缺数据，不算 MMmap 的问题）===' -ForegroundColor Yellow
+        Write-Host '=== 其它插件的报错（多为测试环境缺数据，不算 星轨 的问题）===' -ForegroundColor Yellow
         $otherErr | Select-Object -First 3 | ForEach-Object { Write-Host (($_ -split "`n")[0]) }
     }
 
     $enabled = ($lines | Where-Object { $_ -match '已成功启用' }).Count -gt 0
-    $loaded  = ($lines | Where-Object { $_ -match 'Loading server plugin MMmap' }).Count -gt 0
+    $loaded  = ($lines | Where-Object { $_ -match 'Loading server plugin StarTrail' }).Count -gt 0
 
     Write-Host ''
     if ($loaded -and $enabled -and $ourErr.Count -eq 0) {
-        Write-Host '结果: 通过 ✔  MMmap 正常加载并启用，没有属于它的异常' -ForegroundColor Green
-        if ($otherErr.Count -gt 0) { Write-Host "（另有 $($otherErr.Count) 处其它插件的报错，见上，与 MMmap 无关）" -ForegroundColor Yellow }
+        Write-Host '结果: 通过 ✔  星轨 正常加载并启用，没有属于它的异常' -ForegroundColor Green
+        if ($otherErr.Count -gt 0) { Write-Host "（另有 $($otherErr.Count) 处其它插件的报错，见上，与 星轨 无关）" -ForegroundColor Yellow }
         if (-not $done) { Write-Host '（提示：没等到 Done 就结束了，请确认日志）' -ForegroundColor Yellow }
         exit 0
     }
     else {
-        Write-Host ('结果: 不通过 ✘  loaded={0} enabled={1} mmap错误={2}' -f $loaded, $enabled, $ourErr.Count) -ForegroundColor Red
+        Write-Host ('结果: 不通过 ✘  loaded={0} enabled={1} 本插件错误={2}' -f $loaded, $enabled, $ourErr.Count) -ForegroundColor Red
         Write-Host "完整日志: $log"
         exit 1
     }

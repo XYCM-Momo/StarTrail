@@ -7,6 +7,9 @@ plugin-paper/build/
 plugin-paper/.gradle/
 plugin-paper/run/
 
+# ── 工作区本地 Gradle 用户目录（构建缓存副本，约 1.3GB，可随时重建）──
+.gradle-home/
+
 # ── 备份快照：体积大，而且是"版本库本身的备份"，不该套娃 ──
 backups/
 

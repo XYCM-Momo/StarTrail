@@ -1,28 +1,25 @@
-name: MMmap
-version: '1.9.4'
-main: com.mmap.server.MMmapPlugin
+name: StarTrail
+version: '1.0.0'
+main: com.asterovie.momo.startrail.server.StarTrailPlugin
 api-version: '1.20'
-author: MMmap Team
-description: 地图区域管理与客户端同步插件
+authors: ['星野尘梦工作室 · 默默']
+description: 星轨 — 大地图、小地图、区域与点位导航
 softdepend: [MythicMobs]
 
 commands:
-  mmmap:
-    description: MMmap 主命令
-    usage: /<command> <add|remove|list|info|reload|help>
-    permission: mmap.command
-    aliases: [mmap, map, minimap]
+  startrail:
+    description: 星轨主命令
+    usage: /<command> <list|info|reload|map|tp|warp|help>
+    permission: startrail.command
+    aliases: [st, trail, map, minimap]
 
 permissions:
-  mmap.command:
-    description: 允许使用 MMmap 命令
+  startrail.command:
+    description: 允许使用星轨命令
     default: op
-  mmap.command.add:
-    description: 允许创建区域
-    default: op
-  mmap.command.remove:
-    description: 允许删除区域
-    default: op
-  mmap.command.reload:
+  startrail.command.reload:
     description: 允许重载配置
+    default: op
+  startrail.command.tp:
+    description: 允许大地图传送（右键传送到坐标 / /startrail warp tp）
     default: op

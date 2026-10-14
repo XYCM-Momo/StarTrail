@@ -1,6 +1,6 @@
-# MMmap 工作区
+# 星轨 StarTrail 工作区
 
-MMmap = **Minecraft 客户端地图模组**（小地图 / 大地图 / 区域 / 传送点 / MythicMobs 头颅）
+星轨 StarTrail = **Minecraft 客户端地图模组**（小地图 / 大地图 / 区域 / 传送点 / MythicMobs 头颅）
 ＋ **服务端同步插件**（Paper，负责把区域、传送点、图片绑定、怪物位置推给客户端）。
 
 这个文件夹是它**唯一的开发、构建、发布、备份目录**。所有成品、源码、文档、快照都在这里。
@@ -11,10 +11,10 @@ MMmap = **Minecraft 客户端地图模组**（小地图 / 大地图 / 区域 / �
 
 | 组件 | 版本 | 成品文件 | 状态 |
 |---|---|---|---|
-| Forge 客户端模组 | **1.9.7** | `dist/client-mod/mmap-forge-1.9.7.jar` | 修了「开聊天栏小地图消失」+「图片边界偏 1 格」；**已部署，待实机确认对齐** |
-| Fabric 客户端模组（上游原版） | **1.9.5** | `dist/client-mod/mmap-fabric-1.9.5.jar` | 原样保留，未做任何改动 |
-| 服务端 Paper 插件 | **1.9.4** | `dist/server-plugin/MMmap-Plugin-1.9.4.jar` | ✅ **已有源码工程** `plugin-paper/`，可自己编译发布 |
-| 网络协议 | **v1** | [`docs/PROTOCOL.md`](docs/PROTOCOL.md) | 插件 1.9.4 ↔ 两个平台的模组一致（协议未变） |
+| Forge 客户端模组 | **1.0.0** | `dist/client-mod/startrail-forge-1.0.0.jar` | 星轨（原名 MMmap）首个版本：小地图 / 大地图 / 区域 / 传送点 / 点位导航；**已部署** |
+| Fabric 客户端模组（上游原版） | **1.9.5** | `dist/client-mod/mmap-fabric-1.9.5.jar` | 上游原版，未做任何改动（不参与星轨改名） |
+| 服务端 Paper 插件 | **1.0.0** | `dist/server-plugin/StarTrail-Plugin-1.0.0.jar` | ✅ 源码工程 `plugin-paper/`，可自己编译发布 |
+| 网络协议 | **v1** | [`docs/PROTOCOL.md`](docs/PROTOCOL.md) | 通道 `startrail:main`；插件与模组**必须成对升级**（通道名变了，旧版配不上） |
 
 三者可以互相独立升级，只要协议（包类型号 + 字段顺序）不变。规则见 [`VERSIONING.md`](VERSIONING.md)。
 
@@ -28,10 +28,10 @@ MMmap/
 │
 ├─ dist/                      ★ 成品区：要拿到游戏里用的 jar 都从这里取
 │  ├─ client-mod/
-│  │  ├─ mmap-forge-1.9.7.jar        Forge 客户端模组（MC 1.20.1 / Forge 47.x）★ 当前在用
+│  │  ├─ startrail-forge-1.9.7.jar        Forge 客户端模组（MC 1.20.1 / Forge 47.x）★ 当前在用
 │  │  └─ mmap-fabric-1.9.5.jar       Fabric 客户端模组（上游原版，MC 1.20.1 / Fabric）
 │  ├─ server-plugin/
-│  │  └─ MMmap-Plugin-1.9.4.jar      服务端 Paper 插件
+│  │  └─ StarTrail-Plugin-1.9.4.jar      服务端 Paper 插件
 │  └─ SHA256SUMS.txt          成品校验清单（tools\verify-dist.ps1 生成/校验）
 │
 ├─ releases/                  历史发布冻结区：每次正式发布存一份，不再改动
@@ -43,7 +43,7 @@ MMmap/
 │  ├─ build.gradle            版本/映射/依赖配置
 │  ├─ README.md               工程说明 + Fabric→Forge 移植对照表
 │  └─ src/main/
-│     ├─ java/com/mmap/client/   35 个类（原模组 33 个 + 新增 2 个）
+│     ├─ java/com/asterovie/momo/startrail/client/   35 个类（原模组 33 个 + 新增 2 个）
 │     └─ resources/              mods.toml / pack.mcmeta / 语言文件
 │
 ├─ plugin-paper/              ★ Paper 服务端插件工程（Gradle，可编译改代码）
@@ -52,7 +52,7 @@ MMmap/
 │  ├─ build.gradle            版本号从 plugin.yml 读，无需手改
 │  ├─ README.md               工程说明 + 与原版 jar 的等价性验证结果
 │  └─ src/main/
-│     ├─ java/com/mmap/server/   20 个类（反编译恢复的源码）
+│     ├─ java/com/asterovie/momo/startrail/server/   20 个类（反编译恢复的源码）
 │     └─ resources/              plugin.yml / config.yml / language.yml / regions.yml / warps.yml
 │
 ├─ docs/
@@ -157,7 +157,7 @@ Git 装在 **`D:\Git`**（2.55.0，仅当前用户）；`D:\Git\cmd` 已加入�
 新开的终端里直接 `git` 就能用。所有 Git 配置写在 **`D:\Git\etc\gitconfig`**（不占 C 盘）。
 
 ```powershell
-cd E:\Minecraft\服务器\插件\MMmap
+cd E:\Minecraft\服务器\插件\StarTrail
 git status
 git log --oneline
 git diff                 # 看改了什么

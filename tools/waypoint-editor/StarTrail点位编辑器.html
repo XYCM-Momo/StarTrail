@@ -1,0 +1,1824 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>星轨 StarTrail 点位编辑器</title>
+<style>
+  :root {
+    --bg: #15171c;
+    --panel: #1d2027;
+    --panel2: #232731;
+    --border: #323844;
+    --text: #e6e9ef;
+    --muted: #8b93a3;
+    --accent: #4ea1ff;
+    --accent2: #ffd34d;
+    --danger: #ff5d5d;
+    --ok: #4ecb71;
+    --warn: #ffb020;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", system-ui, sans-serif;
+    background: var(--bg); color: var(--text);
+    display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+    font-size: 14px;
+  }
+  header {
+    display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;
+    padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--border);
+    overflow-x: auto; scrollbar-width: thin; flex-shrink: 0;
+  }
+  header h1 { font-size: 15px; margin: 0 10px 0 0; white-space: nowrap; }
+  header h1 small { display: none; }
+  header .btn { white-space: nowrap; flex-shrink: 0; padding: 5px 9px; font-size: 12px; }
+  header .indicator { font-size: 11px; white-space: nowrap; flex-shrink: 0; }
+  .btn {
+    background: var(--panel2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 7px 12px; cursor: pointer; font-size: 13px;
+    transition: background .15s, border-color .15s;
+    user-select: none;
+  }
+  .btn:hover { background: #2b303c; border-color: var(--accent); }
+  .btn.primary { background: #2b5da8; border-color: #3b78cc; }
+  .btn.primary:hover { background: #3368b8; }
+  .btn.danger { background: #5c2b2b; border-color: #8c3b3b; }
+  .btn.danger:hover { background: #6e3434; }
+  .btn.active { background: #2b5da8; border-color: var(--accent); }
+  .spacer { flex: 1; }
+  #saved-indicator { color: var(--ok); font-size: 12px; opacity: .9; }
+  main { flex: 1; display: flex; min-height: 0; }
+  #canvas-wrap {
+    position: relative; flex: 1; background: #101218; min-width: 0;
+  }
+  #map-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+  #map-canvas.adding { cursor: crosshair; }
+  #map-canvas.multi { cursor: crosshair; }
+  #map-canvas.linking { cursor: crosshair; }
+  #map-canvas.dragging { cursor: grabbing; }
+  #map-canvas.marqueeing { cursor: crosshair; }
+  #empty-hint {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; color: var(--muted);
+    text-align: center; pointer-events: none; gap: 8px;
+  }
+  #empty-hint .big { font-size: 40px; }
+  #statusbar {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    display: flex; gap: 18px; padding: 6px 12px;
+    background: rgba(20,22,28,.85); border-top: 1px solid var(--border);
+    font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums;
+    pointer-events: none; white-space: nowrap; overflow: hidden;
+  }
+  #zoom-controls {
+    position: absolute; right: 12px; top: 12px; display: flex; flex-direction: column; gap: 6px;
+  }
+  #zoom-controls .btn { width: 34px; height: 30px; padding: 0; text-align: center; line-height: 28px; }
+  #sidebar {
+    width: 330px; min-width: 280px; background: var(--panel);
+    border-left: 1px solid var(--border); overflow-y: auto; padding: 12px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .card { background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+  .card h2 { margin: 0 0 10px; font-size: 13px; color: var(--accent); text-transform: uppercase; letter-spacing: .5px; }
+  .field { margin-bottom: 8px; }
+  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 3px; }
+  .field input, .field textarea {
+    width: 100%; background: #14161c; color: var(--text); border: 1px solid var(--border);
+    border-radius: 5px; padding: 6px 8px; font-size: 13px; font-family: inherit;
+  }
+  .field input:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
+  .field input.invalid { border-color: var(--danger); }
+  .check-right { display: flex; align-items: center; justify-content: flex-end; gap: 6px; font-size: 12px; color: var(--muted); cursor: pointer; user-select: none; }
+  .check-right input { width: auto; margin: 0; }
+  .row { display: flex; gap: 8px; }
+  .row .field { flex: 1; }
+  .hint { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+  .warnbox {
+    font-size: 12px; color: var(--warn); border: 1px solid rgba(255,176,32,.4);
+    background: rgba(255,176,32,.08); border-radius: 6px; padding: 7px 9px; margin-top: 8px; line-height: 1.5;
+  }
+  .okbox {
+    font-size: 12px; color: var(--ok); border: 1px solid rgba(78,203,113,.4);
+    background: rgba(78,203,113,.07); border-radius: 6px; padding: 7px 9px; margin-top: 8px; line-height: 1.5;
+  }
+  #wp-list { display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow-y: auto; }
+  .wp-row {
+    display: flex; align-items: center; gap: 8px; padding: 5px 8px;
+    border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+    background: #1a1d24; font-size: 12.5px;
+  }
+  .wp-row:hover { border-color: var(--accent); }
+  .wp-row.selected { border-color: var(--accent2); background: #26281f; }
+  .wp-row.multi { border-color: #ffffff; box-shadow: 0 0 0 1px rgba(255,255,255,.4); }
+  .wp-row .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .wp-row .wp-id { font-weight: 600; min-width: 70px; }
+  .wp-row .wp-xyz { color: var(--muted); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .wp-row .wp-links { color: var(--danger); flex: none; }
+  .wp-empty { color: var(--muted); font-size: 12px; padding: 6px 2px; }
+  #link-chips { min-height: 22px; display: flex; flex-wrap: wrap; align-items: center; }
+  #link-chips .link-chip { display: inline-flex; align-items: center; gap: 4px; background: #26281f; border: 1px solid var(--accent2); color: #ffd34d; border-radius: 10px; padding: 1px 5px 1px 9px; font-size: 11.5px; margin: 2px 4px 2px 0; }
+  #link-chips .chip-x { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 11px; padding: 0 2px; line-height: 1; }
+  #link-chips .chip-x:hover { color: var(--danger); }
+  #link-filter-list { max-height: 140px; overflow-y: auto; margin-top: 6px; border: 1px solid #2a2d35; border-radius: 6px; padding: 4px 6px; display: flex; flex-direction: column; gap: 2px; background: #14161c; }
+  #link-filter-list .link-item { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text); cursor: pointer; padding: 2px 4px; border-radius: 4px; }
+  #link-filter-list .link-item:hover { background: #1b1d24; }
+  #link-filter-list .link-item input { width: auto; margin: 0; }
+  details { border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; background: #14161c; }
+  details summary { cursor: pointer; font-size: 12px; color: var(--muted); user-select: none; }
+  details textarea { width: 100%; height: 90px; margin-top: 6px; background: #101218; color: var(--text); border: 1px solid var(--border); border-radius: 5px; padding: 6px; font-size: 12px; font-family: Consolas, monospace; resize: vertical; }
+  .btn-group { display: flex; gap: 6px; flex-wrap: wrap; }
+  .btn.small { padding: 4px 8px; font-size: 12px; }
+  kbd { background: #101218; border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; font-size: 11px; font-family: Consolas, monospace; }
+  #toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+    background: #2b323e; border: 1px solid var(--border); color: var(--text);
+    padding: 9px 18px; border-radius: 8px; font-size: 13px; opacity: 0;
+    transition: opacity .25s; pointer-events: none; z-index: 99; max-width: 80vw;
+    box-shadow: 0 6px 24px rgba(0,0,0,.5);
+  }
+  #toast.show { opacity: 1; }
+  #toast.err { border-color: var(--danger); color: #ffb3b3; }
+  #toast.ok { border-color: var(--ok); color: #b8ffd0; }
+  #canvas-wrap.drag-over::after {
+    content: "松开以导入图片 / .mmap / .startrail";
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: rgba(78,161,255,.15); border: 3px dashed var(--accent); color: var(--accent);
+    font-size: 18px; pointer-events: none; z-index: 5;
+  }
+  #yaml-out, #json-out {
+    width: 100%; height: 130px; background: #101218; color: #9fd3ff; border: 1px solid var(--border);
+    border-radius: 5px; padding: 6px 8px; font-size: 12px; font-family: Consolas, monospace; resize: vertical; margin-top: 8px;
+  }
+  .hidden { display: none !important; }
+  footer { font-size: 11px; color: var(--muted); padding: 4px 14px 8px; border-top: 1px solid var(--border); background: var(--panel); }
+</style>
+</head>
+<body>
+<header>
+  <h1>🗺️ 星轨 StarTrail 点位编辑器</h1>
+  <button class="btn primary" id="btn-import-image">📥 导入图片 / .mmap / .startrail</button>
+  <button class="btn" id="btn-open-waypoints" title="选择点位文件后，编辑器里的修改会实时写回该文件">📂 选择点位图文件</button>
+  <button class="btn" id="btn-set-dir" title="手动选一次点位文件夹，之后「选择点位图文件」会直接打开这个文件夹">📁 记住目录</button>
+  <span id="file-indicator" class="indicator hidden" style="color:var(--ok)">📄 <span id="file-name-show"></span></span>
+  <span id="dir-indicator" class="indicator hidden" style="color:var(--muted)">📁 <span id="dir-name-show"></span></span>
+  <button class="btn hidden" id="btn-restore-file" title="重新打开上次选择的点位文件">🔁 重开上次文件</button>
+  <button class="btn" id="btn-add-mode" title="快捷键 A">➕ 添加点位 <span id="add-mode-state" style="font-weight:700">关</span></button>
+  <button class="btn" id="btn-multi-mode" title="快捷键 M：点选/框选批量选中点位，可批量删除">🔲 多选 <span id="multi-mode-state" style="font-weight:700">关</span></button>
+  <button class="btn" id="btn-link-mode" title="快捷键 L：地图上点两个点位即双向连通，再点一次断开">🔗 连线 <span id="link-mode-state" style="font-weight:700">关</span></button>
+  <button class="btn active" id="btn-pixel-mode" title="关闭后缩放使用平滑插值（照片类图片更柔和）">🔍 像素锐化 <span id="pixel-mode-state" style="font-weight:700">开</span></button>
+  <button class="btn" id="btn-fit">⛶ 适应窗口</button>
+  <span class="spacer"></span>
+  <span id="saved-indicator" class="hidden">✓ 已保存</span>
+</header>
+
+<main>
+  <div id="canvas-wrap">
+    <canvas id="map-canvas"></canvas>
+    <div id="empty-hint">
+      <div class="big">🖼️</div>
+      <div><b>点击「导入图片」或把文件拖进来</b></div>
+      <div>支持 PNG / JPG / WebP / 加密 .mmap/.startrail，可缩放平移；点图上空白处添加点位</div>
+    </div>
+    <div id="zoom-controls">
+      <button class="btn" id="btn-zoom-in" title="放大">＋</button>
+      <button class="btn" id="btn-zoom-out" title="缩小">－</button>
+    </div>
+    <div id="statusbar">
+      <span id="sb-zoom">缩放: -</span>
+      <span id="sb-pixel">像素: -</span>
+      <span id="sb-world">世界: -</span>
+      <span id="sb-tip">拖拽平移 · 滚轮缩放 · 双击复位</span>
+      <span id="sb-ver" style="opacity:.55;margin-left:auto">v7</span>
+    </div>
+  </div>
+
+  <aside id="sidebar">
+    <div class="card">
+      <h2>地图设置（边界值）</h2>
+      <div class="field"><label>地图 ID（导出文件名 = ID.json）</label><input id="f-mapId" placeholder="如 main_map"></div>
+      <div class="field"><label>图片文件名（客户端 images 目录下的文件名）</label><input id="f-fileName" placeholder="如 overworld.png"></div>
+      <div class="field"><label>所属世界（world）</label><input id="f-world" placeholder="如 world"></div>
+      <div class="row">
+        <div class="field"><label>minX（西北角）</label><input id="f-minX" type="number" placeholder="-1000"></div>
+        <div class="field"><label>minZ</label><input id="f-minZ" type="number" placeholder="-1000"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>maxX（东南角）</label><input id="f-maxX" type="number" placeholder="1000"></div>
+        <div class="field"><label>maxZ</label><input id="f-maxZ" type="number" placeholder="1000"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>新点位默认 Y 高度</label><input id="f-defaultY" type="number" step="0.5" value="64"></div>
+      </div>
+      <div class="field"><label>吸附网格（方块，默认 0.5）</label><input id="f-snapGrid" type="number" step="0.25" min="0.01" value="0.5"></div>
+      <div class="field">
+        <label class="check-right"><span>标点吸附</span><input id="f-snapEnabled" type="checkbox" checked></label>
+      </div>
+      <div class="field">
+        <label class="check-right"><span>新建点位自动连通上次选中的点位</span><input id="f-autoLink" type="checkbox" checked></label>
+      </div>
+      <div class="row">
+        <div class="field"><label>方向键创建步长（方块，默认 10）</label><input id="f-stepDist" type="number" step="0.5" min="0.01" value="10"></div>
+      </div>
+      <div class="hint">
+        开启后：先点一下已有点位（选中）→ 再点空白处新建，两个点位会自动双向连通（可连续串点）。
+      </div>
+      <div class="hint">
+        <kbd>Shift</kbd> + <kbd>方向键</kbd> / <kbd>WASD</kbd>：从选中点位朝该方向按「步长」距离创建点位并自动连通；
+        连续按同方向键可直线延伸（上=北/下=南/左=西/右=东）。
+      </div>
+      <div class="hint">
+        左上角（西北）= (minX, minZ)，右下角（东南）= (maxX, maxZ)；图片上边 = 北方（Z 小）、左边 = 西方（X 小）。<br>
+        像素 → 世界：X = minX + 像素x/图宽 × (maxX−minX)，Z 同理。
+      </div>
+      <div id="ratio-warn" class="hidden warnbox"></div>
+    </div>
+
+    <div class="card">
+      <h2 style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        点位列表（<span id="wp-count">0</span>）
+        <span style="flex:1"></span>
+        <button class="btn small danger hidden" id="btn-delete-multi">🗑 删除选中(<span id="multi-count">0</span>)</button>
+        <button class="btn small hidden" id="btn-clear-multi" title="清除多选">✕</button>
+      </h2>
+      <div id="wp-list"><div class="wp-empty">还没有点位。打开「添加点位模式」后在地图上点击即可添加。</div></div>
+      <div class="hint">多选模式（<kbd>M</kbd>）：点击点位切换选中，拖拽空白处框选；<kbd>Esc</kbd> 清除多选。</div>
+    </div>
+
+    <div class="card" id="selected-card">
+      <h2>选中点位</h2>
+      <div id="selected-empty" class="wp-empty">点击地图上的点位或列表项进行编辑。</div>
+      <div id="selected-form" class="hidden">
+        <div class="field"><label>点位 ID（唯一）</label><input id="f-wp-id"></div>
+        <div class="row">
+          <div class="field"><label>X</label><input id="f-wp-x" type="number" step="0.5"></div>
+          <div class="field"><label>Y</label><input id="f-wp-y" type="number" step="0.5"></div>
+          <div class="field"><label>Z</label><input id="f-wp-z" type="number" step="0.5"></div>
+        </div>
+        <div class="field"><label>连通点位（双向）</label><div id="link-chips"></div></div>
+        <div class="field">
+          <input id="f-link-filter" placeholder="筛选点位 ID…（输入关键字后勾选）">
+          <div id="link-filter-list"></div>
+        </div>
+        <div class="hint">点位多时用「🔗 连线模式」（<kbd>L</kbd>）：地图上先点一个点位，再点另一个即互连，再点一次断开。</div>
+        <div class="btn-group" style="margin-top:8px">
+          <button class="btn" id="btn-snap-wp" title="把 X/Z 吸附到当前网格（默认 0.5）">🎯 吸附 X/Z 到网格</button>
+          <button class="btn danger" id="btn-delete-wp">🗑 删除该点位</button>
+        </div>
+        <div class="hint">修改 ID / X / Y / Z 会实时自动应用（不需要点按钮）。在地图上直接拖动该点位也能移动（自动换算 X/Z 并吸附）。</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>导出</h2>
+      <div class="btn-group">
+        <button class="btn primary" id="btn-export-json">⬇ 导出点位 JSON</button>
+        <button class="btn" id="btn-export-yaml">⬇ 导出 images.yml 片段</button>
+      </div>
+      <div class="hint">点位 JSON 放到 <code>plugins/StarTrail/waypoints/&lt;地图ID&gt;.json</code>（客户端同步到 <code>.minecraft/startrail/waypoints/</code>）；images.yml 片段贴进服务端 <code>plugins/StarTrail/images.yml</code> 并执行 /startrail reload。</div>
+      <details>
+        <summary>预览 / 粘贴导入（JSON 或 images.yml 片段）</summary>
+        <textarea id="paste-area" placeholder="在这里粘贴 JSON 或 images.yml 片段…"></textarea>
+        <div class="btn-group" style="margin-top:6px">
+          <button class="btn small" id="btn-parse-json">解析为点位 JSON</button>
+          <button class="btn small" id="btn-parse-yaml">解析为地图设置</button>
+        </div>
+      </details>
+      <textarea id="json-out" class="hidden" readonly></textarea>
+      <textarea id="yaml-out" class="hidden" readonly></textarea>
+    </div>
+  </aside>
+</main>
+
+<footer>
+  使用说明：导入图片或加密 .mmap（可拖拽）→ 填好边界值 → 开启「添加点位模式」在地图上点击添加 → 拖动/表单修改 → 导出。数据自动保存到浏览器 localStorage，刷新不丢失（图片需重新导入）。.mmap 解密在本地完成，格式与 <code>WaypointManager.WaypointFileData</code>（服务端）及 <code>WaypointStore</code>（客户端）完全一致。
+</footer>
+
+<div id="toast"></div>
+
+<input type="file" id="file-image" accept="image/png,image/jpeg,image/webp,.mmap,.startrail,application/octet-stream" class="hidden">
+<input type="file" id="file-json" accept=".json,application/json" class="hidden">
+
+<script>
+"use strict";
+/* ===================== 状态 ===================== */
+const LS_KEY = "mmap-waypoint-editor-v1";
+
+const state = {
+  mapId: "",
+  fileName: "",
+  world: "",
+  minX: 0, minZ: 0, maxX: 0, maxZ: 0,
+  defaultY: 64,
+  snapEnabled: true,   // 标点吸附
+  snapGrid: 0.5,       // 吸附网格（方块）
+  autoLink: true,      // 新建点位自动连通上次选中的点位
+  stepDist: 10,        // Shift+方向键 创建步长（方块）
+  smoothImage: false,  // 缩放是否平滑插值（false=像素锐化）
+  image: null,          // HTMLImageElement
+  imageName: "",
+  imageData: null,      // dataURL (用于持久化，超限则不存)
+  waypoints: []         // {id,x,y,z,links:[],_extra:{...}}
+};
+
+const view = { offsetX: 0, offsetY: 0, scale: 1 };
+let addMode = false;
+let multiMode = false;
+let linkMode = false;
+let linkStartId = null;   // 连线模式的起点点位 id
+const multiIds = new Set(); // 多选批量选中的点位 id
+let selectedId = null;
+let dragState = null;   // {mode:'wp'|'pan'|'marquee', ...}
+let hoverId = null;
+let hoverPos = null;    // 鼠标屏幕坐标（用于吸附预览十字线）
+let dirtyTimer = null;
+let fileHandle = null;          // 通过「选择点位图文件」绑定的文件句柄（实时写回）
+let fileWriteChain = Promise.resolve(); // 串行化文件写入，避免并发覆盖
+
+/* ===================== DOM ===================== */
+const $ = id => document.getElementById(id);
+const canvas = $("map-canvas");
+const ctx = canvas.getContext("2d");
+const wrap = $("canvas-wrap");
+
+const fields = {
+  mapId: $("f-mapId"), fileName: $("f-fileName"), world: $("f-world"),
+  minX: $("f-minX"), minZ: $("f-minZ"), maxX: $("f-maxX"), maxZ: $("f-maxZ"),
+  defaultY: $("f-defaultY"),
+  snapEnabled: $("f-snapEnabled"), snapGrid: $("f-snapGrid"),
+  autoLink: $("f-autoLink"), stepDist: $("f-stepDist")
+};
+
+/* ===================== 工具函数 ===================== */
+function fmt(v, digits = 1) {
+  if (typeof v !== "number" || !isFinite(v)) return "0";
+  return String(Math.round(v * 10 ** digits) / 10 ** digits);
+}
+function num(v) {
+  const n = typeof v === "number" ? v : parseFloat(v);
+  return isFinite(n) ? n : 0;
+}
+function sanitize(id) {
+  return String(id || "").replace(/[\\/:*?"<>|]/g, "_");
+}
+function boundsValid() {
+  return (state.maxX - state.minX) !== 0 && (state.maxZ - state.minZ) !== 0;
+}
+function imageSize() {
+  if (!state.image) return { w: 0, h: 0 };
+  return { w: state.image.naturalWidth || 0, h: state.image.naturalHeight || 0 };
+}
+/* 像素(图内坐标, 左上为原点) <-> 世界坐标 */
+function pixelToWorld(px, py) {
+  const { w, h } = imageSize();
+  if (!w || !h || !boundsValid()) return null;
+  return {
+    x: state.minX + (px / w) * (state.maxX - state.minX),
+    z: state.minZ + (py / h) * (state.maxZ - state.minZ)
+  };
+}
+function worldToPixel(x, z) {
+  const { w, h } = imageSize();
+  if (!w || !h || !boundsValid()) return { px: 0, py: 0 };
+  return {
+    px: ((x - state.minX) / (state.maxX - state.minX)) * w,
+    py: ((z - state.minZ) / (state.maxZ - state.minZ)) * h
+  };
+}
+function getWp(id) { return state.waypoints.find(w => w.id === id); }
+/* 自动 ID：从 wp0 开始；文件里已有带数字的 ID 时，取最大数字 +1（如已有 wp5/wp12 则下一个 wp13） */
+function nextWpId() {
+  let max = -1;
+  for (const wp of state.waypoints) {
+    const m = String(wp.id).match(/(\d+)(?=\D*$)/); // 取 ID 末尾/最后一串数字
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  }
+  return "wp" + (max + 1);
+}
+
+/* ===================== 输入同步 ===================== */
+function readFields() {
+  state.mapId = fields.mapId.value.trim();
+  state.fileName = fields.fileName.value.trim();
+  state.world = fields.world.value.trim();
+  state.minX = num(fields.minX.value);
+  state.minZ = num(fields.minZ.value);
+  state.maxX = num(fields.maxX.value);
+  state.maxZ = num(fields.maxZ.value);
+  state.defaultY = num(fields.defaultY.value);
+  state.snapEnabled = fields.snapEnabled.checked;
+  state.snapGrid = Math.max(0.01, num(fields.snapGrid.value) || 0.5);
+  state.autoLink = fields.autoLink.checked;
+  state.stepDist = Math.max(0.01, num(fields.stepDist.value) || 10);
+}
+function writeFields() {
+  fields.mapId.value = state.mapId;
+  fields.fileName.value = state.fileName;
+  fields.world.value = state.world;
+  fields.minX.value = state.minX;
+  fields.minZ.value = state.minZ;
+  fields.maxX.value = state.maxX;
+  fields.maxZ.value = state.maxZ;
+  fields.defaultY.value = state.defaultY;
+  fields.snapEnabled.checked = state.snapEnabled;
+  fields.snapGrid.value = state.snapGrid;
+  fields.autoLink.checked = state.autoLink;
+  fields.stepDist.value = state.stepDist;
+}
+Object.values(fields).forEach(el => el.addEventListener("input", () => {
+  readFields();
+  updateRatioWarn();
+  scheduleSave();
+  redraw();
+}));
+/* 吸附到网格（默认 0.5 格 = MC 0.5 方块）；去掉浮点尾巴 */
+function snapCoord(v) {
+  if (!state.snapEnabled) return v;
+  const g = state.snapGrid;
+  if (!(g > 0)) return v;
+  const n = Math.round(v / g) * g;
+  return Math.round(n * 1e6) / 1e6;
+}
+
+/* ===================== 宽高比校验 ===================== */
+function updateRatioWarn() {
+  const el = $("ratio-warn");
+  const { w, h } = imageSize();
+  if (!w || !h || !boundsValid()) { el.classList.add("hidden"); return; }
+  const imgRatio = w / h;
+  const worldRatio = Math.abs(state.maxX - state.minX) / Math.abs(state.maxZ - state.minZ);
+  if (Math.abs(imgRatio - worldRatio) > 0.001) {
+    el.classList.remove("hidden");
+    el.innerHTML = `⚠️ 图片宽高比 <b>${imgRatio.toFixed(3)}</b> 与边界宽高比 <b>${worldRatio.toFixed(3)}</b> 不一致，显示时会拉伸变形。请检查边界值或裁剪图片。`;
+  } else {
+    el.classList.add("hidden");
+  }
+}
+
+/* ===================== 持久化 ===================== */
+function scheduleSave() {
+  if (dirtyTimer) clearTimeout(dirtyTimer);
+  dirtyTimer = setTimeout(() => { saveState(); saveToFile(); }, 600);
+  showSaved(false);
+}
+function saveState() {
+  try {
+    const data = {
+      mapId: state.mapId, fileName: state.fileName, world: state.world,
+      minX: state.minX, minZ: state.minZ, maxX: state.maxX, maxZ: state.maxZ,
+      defaultY: state.defaultY,
+      snapEnabled: state.snapEnabled, snapGrid: state.snapGrid, smoothImage: state.smoothImage,
+      autoLink: state.autoLink, stepDist: state.stepDist,
+      imageName: state.imageName, imageData: state.imageData,
+      waypoints: state.waypoints
+    };
+    localStorage.setItem(LS_KEY, JSON.stringify(data));
+    showSaved(true);
+  } catch (e) {
+    // 图片太大存不下时，去掉图片重试
+    try {
+      const data = {
+        mapId: state.mapId, fileName: state.fileName, world: state.world,
+        minX: state.minX, minZ: state.minZ, maxX: state.maxX, maxZ: state.maxZ,
+        defaultY: state.defaultY, snapEnabled: state.snapEnabled, snapGrid: state.snapGrid,
+        smoothImage: state.smoothImage, autoLink: state.autoLink, stepDist: state.stepDist,
+        imageName: state.imageName, imageData: null,
+        waypoints: state.waypoints
+      };
+      localStorage.setItem(LS_KEY, JSON.stringify(data));
+      state.imageData = null;
+      showSaved(true);
+      toast("图片过大未保存，刷新后需重新导入图片", "err");
+    } catch (e2) { /* ignore */ }
+  }
+}
+function loadState() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    Object.assign(state, {
+      mapId: d.mapId || "", fileName: d.fileName || "", world: d.world || "",
+      minX: num(d.minX), minZ: num(d.minZ), maxX: num(d.maxX), maxZ: num(d.maxZ),
+      defaultY: num(d.defaultY) || 64,
+      snapEnabled: d.snapEnabled !== false,
+      snapGrid: Math.max(0.01, num(d.snapGrid) || 0.5),
+      smoothImage: !!d.smoothImage,
+      autoLink: d.autoLink !== false,
+      stepDist: Math.max(0.01, num(d.stepDist) || 10),
+      imageName: d.imageName || "", imageData: d.imageData || null,
+      waypoints: Array.isArray(d.waypoints) ? d.waypoints.map(normalizeWp) : []
+    });
+    writeFields();
+    updatePixelModeButton();
+    if (state.imageData) {
+      const img = new Image();
+      img.onload = () => { state.image = img; fitView(); afterImage(); };
+      img.src = state.imageData;
+    }
+  } catch (e) { console.warn("读取本地存档失败", e); }
+}
+function normalizeWp(w) {
+  return {
+    id: String(w.id != null ? w.id : nextWpId()),
+    x: num(w.x), y: num(w.y), z: num(w.z),
+    links: Array.isArray(w.links) ? w.links.map(String) : [],
+    _extra: buildExtra(w)
+  };
+}
+function buildExtra(w) {
+  const extra = {};
+  for (const k of Object.keys(w)) {
+    // `_extra` 是编辑器内部保留字段，不能再次被包进 _extra
+    if (!["id", "x", "y", "z", "links", "_extra"].includes(k)) extra[k] = w[k];
+  }
+  absorbExtra(extra, w._extra); // 吸收历史嵌套的 _extra（旧版 bug 产物），避免重复包裹
+  return extra;
+}
+/* 递归把 _extra 链里的字段平铺进 target（用于清理旧版重复嵌套的 _extra） */
+function absorbExtra(target, src) {
+  if (!src || typeof src !== "object" || Array.isArray(src)) return;
+  for (const k of Object.keys(src)) {
+    if (k === "_extra") { absorbExtra(target, src[k]); continue; }
+    if (!(k in target)) target[k] = src[k];
+  }
+}
+function showSaved(on) {
+  const el = $("saved-indicator");
+  el.classList.toggle("hidden", !on);
+}
+let toastTimer = null;
+function toast(msg, type = "") {
+  const el = $("toast");
+  el.textContent = msg;
+  el.className = "show " + type;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2600);
+}
+
+/* ===================== 图片导入（支持加密 .mmap） ===================== */
+// 与 mod-forge ImageCrypto 完全一致的 .mmap 格式：
+//   "MMAP"(4) + 版本(1) + 文件名长度(2, 大端) + 文件名(UTF-8) + IV(16) + AES/CBC/PKCS5 密文
+//   密钥 = SHA-256("MMmap-Xaero-Static-Image-2026") 的前 16 字节（AES-128）
+const MMAP_MAGIC = [0x4D, 0x4D, 0x41, 0x50]; // "MMAP"
+const MMAP_KEY_STR = "MMmap-Xaero-Static-Image-2026";
+
+function baseNameFrom(filename) {
+  return String(filename).replace(/\.[^.]+$/, "").toLowerCase().replace(/[^a-z0-9_]+/g, "_");
+}
+function hasWebCrypto() {
+  return typeof crypto !== "undefined" && !!crypto.subtle;
+}
+async function decryptMmap(bytes) {
+  // 非 .mmap（无魔数）或解密失败返回 null；成功返回 { name, blob }
+  if (!bytes || bytes.length < 4 || !MMAP_MAGIC.every((v, i) => bytes[i] === v)) return null;
+  if (bytes[4] !== 1) return null; // 版本不符
+  const nameLen = (bytes[5] << 8) | bytes[6];
+  let offset = 7;
+  if (offset + nameLen + 16 > bytes.length) return null;
+  const name = new TextDecoder().decode(bytes.subarray(offset, offset + nameLen));
+  offset += nameLen;
+  const iv = bytes.subarray(offset, offset + 16);
+  offset += 16;
+  const encrypted = bytes.subarray(offset);
+  if (!hasWebCrypto()) {
+    throw new Error("当前浏览器不支持 WebCrypto（AES 解密需要），请用较新版本的 Chrome/Edge/Firefox 打开");
+  }
+  const keyMat = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(MMAP_KEY_STR));
+  const key = await crypto.subtle.importKey("raw", keyMat.slice(0, 16), { name: "AES-CBC" }, false, ["decrypt"]);
+  let plain;
+  try {
+    plain = await crypto.subtle.decrypt({ name: "AES-CBC", iv }, key, encrypted);
+  } catch (e) {
+    return null; // 密钥不符或数据损坏
+  }
+  return { name, blob: new Blob([plain], { type: "image/png" }) };
+}
+
+function setImage(file) {
+  if (/\.(mmap|startrail)$/i.test(file.name)) {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const dec = await decryptMmap(new Uint8Array(reader.result));
+        if (!dec) { toast("不是有效的 .mmap/.startrail 文件或解密失败", "err"); return; }
+        applyImageBlob(dec.blob, file.name, dec.name);
+      } catch (e) {
+        toast("解密失败：" + e.message, "err");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    return;
+  }
+  applyImageBlob(file, file.name, file.name);
+}
+
+function applyImageBlob(blob, displayName, embeddedName) {
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+  img.onload = () => {
+    state.image = img;
+    state.imageName = displayName;
+    // 尝试存 dataURL 用于刷新恢复
+    try {
+      const reader = new FileReader();
+      reader.onload = () => { state.imageData = reader.result; scheduleSave(); };
+      reader.readAsDataURL(blob);
+    } catch (e) { /* ignore */ }
+    // 加密 .mmap 时用文件头里的原始文件名（images.yml 里 fileName 填这个名字）
+    if (!state.fileName && embeddedName) state.fileName = embeddedName;
+    if (!state.fileName) state.fileName = displayName;
+    if (!state.mapId) state.mapId = baseNameFrom(embeddedName || displayName);
+    writeFields();
+    updateRatioWarn();
+    fitView();
+    afterImage();
+    toast("图片已导入：" + displayName, "ok");
+  };
+  img.onerror = () => toast("图片加载失败，请换一张", "err");
+  img.src = url;
+}
+function afterImage() {
+  $("empty-hint").classList.add("hidden");
+  redraw();
+}
+$("btn-import-image").addEventListener("click", () => $("file-image").click());
+$("file-image").addEventListener("change", e => {
+  const f = e.target.files && e.target.files[0];
+  if (f) setImage(f);
+  e.target.value = "";
+});
+
+/* 拖拽导入（图片或 .mmap 均可） */
+["dragenter", "dragover"].forEach(ev => {
+  wrap.addEventListener(ev, e => { e.preventDefault(); wrap.classList.add("drag-over"); });
+});
+wrap.addEventListener("dragleave", () => wrap.classList.remove("drag-over"));
+wrap.addEventListener("drop", e => {
+  e.preventDefault();
+  wrap.classList.remove("drag-over");
+  const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) setImage(f);
+});
+
+/* ===================== 视图 ===================== */
+function fitView() {
+  if (!state.image) return;
+  const cw = wrap.clientWidth, ch = wrap.clientHeight;
+  const { w, h } = imageSize();
+  if (!cw || !ch || !w || !h) return;
+  view.scale = Math.min(cw / w, ch / h) * 0.95;
+  view.offsetX = (cw - w * view.scale) / 2;
+  view.offsetY = (ch - h * view.scale) / 2;
+  redraw();
+}
+function screenToPixel(sx, sy) {
+  return { px: (sx - view.offsetX) / view.scale, py: (sy - view.offsetY) / view.scale };
+}
+function pixelToScreen(px, py) {
+  return { sx: view.offsetX + px * view.scale, sy: view.offsetY + py * view.scale };
+}
+$("btn-fit").addEventListener("click", fitView);
+$("btn-zoom-in").addEventListener("click", () => zoomAt(1.3, wrap.clientWidth / 2, wrap.clientHeight / 2));
+$("btn-zoom-out").addEventListener("click", () => zoomAt(1 / 1.3, wrap.clientWidth / 2, wrap.clientHeight / 2));
+canvas.addEventListener("wheel", e => {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  zoomAt(e.deltaY < 0 ? 1.2 : 1 / 1.2, e.clientX - rect.left, e.clientY - rect.top);
+}, { passive: false });
+canvas.addEventListener("dblclick", fitView);
+function zoomAt(factor, sx, sy) {
+  const ns = Math.min(80, Math.max(0.02, view.scale * factor));
+  const k = ns / view.scale;
+  view.offsetX = sx - (sx - view.offsetX) * k;
+  view.offsetY = sy - (sy - view.offsetY) * k;
+  view.scale = ns;
+  redraw();
+}
+
+/* ===================== 点位操作 ===================== */
+function addWaypointAt(sx, sy) {
+  readFields();
+  if (!state.image) { toast("请先导入图片", "err"); return; }
+  const { px, py } = screenToPixel(sx, sy);
+  const w = pixelToWorld(px, py);
+  if (!w) { toast("请先填好有效的边界值（minX≠maxX 且 minZ≠maxZ）", "err"); return; }
+  const prevSel = selectedId && getWp(selectedId) ? selectedId : null;
+  const wp = {
+    id: nextWpId(),
+    x: snapCoord(w.x),
+    y: state.defaultY,
+    z: snapCoord(w.z),
+    links: [],
+    _extra: {}
+  };
+  state.waypoints.push(wp);
+  const linked = !!prevSel && state.autoLink && prevSel !== wp.id;
+  if (linked) setLink(prevSel, wp.id, true); // 双向连通
+  selectedId = wp.id;
+  renderList();
+  renderSelected();
+  redraw();
+  scheduleSave();
+  toast(linked
+    ? `已添加点位 ${wp.id}（${fmt(wp.x, 2)}, ${fmt(wp.y, 2)}, ${fmt(wp.z, 2)}），已与 ${prevSel} 双向连通`
+    : `已添加点位 ${wp.id}（${fmt(wp.x, 2)}, ${fmt(wp.y, 2)}, ${fmt(wp.z, 2)}）`, "ok");
+}
+function moveWaypoint(id, sx, sy) {
+  const wp = getWp(id);
+  if (!wp) return;
+  const { px, py } = screenToPixel(sx, sy);
+  const w = pixelToWorld(px, py);
+  if (!w) return;
+  wp.x = snapCoord(w.x);
+  wp.z = snapCoord(w.z);
+  renderList();
+  renderSelected();
+  redraw();
+}
+function deleteWaypoint(id) {
+  const i = state.waypoints.findIndex(w => w.id === id);
+  if (i < 0) return;
+  state.waypoints.splice(i, 1);
+  state.waypoints.forEach(w => { w.links = w.links.filter(l => l !== id); });
+  if (selectedId === id) selectedId = null;
+  if (multiIds.has(id)) multiIds.delete(id);
+  renderList();
+  renderSelected();
+  redraw();
+  scheduleSave();
+  toast(`已删除点位 ${id}`);
+}
+function setLink(a, b, on) {
+  const wa = getWp(a), wb = getWp(b);
+  if (!wa || !wb || a === b) return;
+  const set = (w, t) => {
+    if (on) { if (!w.links.includes(t)) w.links.push(t); }
+    else w.links = w.links.filter(l => l !== t);
+  };
+  set(wa, b); set(wb, a);  // 双向连通，与游戏 /startrail waypoint link 一致
+}
+/* 切换 a/b 之间的双向连通，返回切换后的状态（true=已连通） */
+function toggleLink(a, b) {
+  if (a === b) return false;
+  const wa = getWp(a), wb = getWp(b);
+  if (!wa || !wb) return false;
+  const linked = wa.links.includes(b);
+  setLink(a, b, !linked);
+  return !linked;
+}
+
+/* ===================== 画布事件 ===================== */
+function hitTest(sx, sy) {
+  const R = 10;
+  for (let i = state.waypoints.length - 1; i >= 0; i--) {
+    const wp = state.waypoints[i];
+    const p = pixelToScreen(worldToPixel(wp.x, wp.z).px, worldToPixel(wp.x, wp.z).py);
+    if (Math.abs(p.sx - sx) <= R && Math.abs(p.sy - sy) <= R) return wp.id;
+  }
+  return null;
+}
+canvas.addEventListener("pointerdown", e => {
+  const rect = canvas.getBoundingClientRect();
+  const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+  canvas.setPointerCapture(e.pointerId);
+  const hit = hitTest(sx, sy);
+  if (linkMode) {
+    if (hit) {
+      if (!linkStartId) {
+        linkStartId = hit;
+        selectedId = hit;
+        updateLinkModeTip();
+        renderList(); renderSelected(); redraw();
+      } else if (linkStartId === hit) {
+        linkStartId = null; // 再点同一点取消起点
+        updateLinkModeTip();
+        redraw();
+      } else {
+        const a = linkStartId, b = hit;
+        const linked = toggleLink(a, b);
+        selectedId = b;
+        linkStartId = b; // 链式：新点位成为下一段起点
+        renderList(); renderSelected(); updateLinkModeTip(); redraw(); scheduleSave();
+        toast(linked ? `已连通 ${a} ↔ ${b}` : `已断开 ${a} ↔ ${b}`, linked ? "ok" : "");
+      }
+    } else {
+      linkStartId = null; // 点空白取消起点
+      updateLinkModeTip();
+      redraw();
+      toast("已取消连线起点", "ok");
+    }
+    return;
+  }
+  if (multiMode) {
+    if (hit) {
+      // 点击点位：切换多选；同时作为编辑目标
+      if (multiIds.has(hit)) multiIds.delete(hit); else multiIds.add(hit);
+      selectedId = hit;
+      renderList(); renderSelected(); redraw();
+    } else {
+      // 空白处：开始框选（拖拽）
+      dragState = { mode: "marquee", x0: sx, y0: sy, x1: sx, y1: sy };
+      canvas.classList.add("marqueeing");
+    }
+  } else if (hit) {
+    dragState = { mode: "wp", id: hit, lastX: sx, lastY: sy };
+    selectedId = hit;
+    renderList(); renderSelected(); redraw();
+  } else if (addMode && state.image) {
+    addWaypointAt(sx, sy);
+    dragState = { mode: "wp", id: selectedId, lastX: sx, lastY: sy };
+  } else {
+    dragState = { mode: "pan", lastX: sx, lastY: sy };
+    canvas.classList.add("dragging");
+  }
+});
+canvas.addEventListener("pointermove", e => {
+  const rect = canvas.getBoundingClientRect();
+  const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+  hoverPos = { sx, sy };
+  updateStatus(sx, sy);
+  const hit = hitTest(sx, sy);
+  if (hit !== hoverId) { hoverId = hit; redraw(); }
+  else if (addMode || multiMode || linkMode) { redraw(); } // 十字线/框选/连线跟随鼠标
+  if (!dragState) return;
+  if (dragState.mode === "pan") {
+    view.offsetX += sx - dragState.lastX;
+    view.offsetY += sy - dragState.lastY;
+    dragState.lastX = sx; dragState.lastY = sy;
+    redraw();
+  } else if (dragState.mode === "marquee") {
+    dragState.x1 = sx; dragState.y1 = sy;
+    redraw();
+  } else if (dragState.mode === "wp" && state.image) {
+    moveWaypoint(dragState.id, sx, sy);
+    dragState.lastX = sx; dragState.lastY = sy;
+    scheduleSave();
+  }
+});
+function endDrag(e) {
+  if (!dragState) return;
+  if (dragState.mode === "pan") canvas.classList.remove("dragging");
+  if (dragState.mode === "marquee") {
+    canvas.classList.remove("marqueeing");
+    // 框选收尾：小位移视为点击空白 -> 清除多选；否则选中框内点位
+    const dx = Math.abs(dragState.x1 - dragState.x0);
+    const dy = Math.abs(dragState.y1 - dragState.y0);
+    if (dx < 3 && dy < 3) {
+      multiIds.clear();
+    } else {
+      const x0 = Math.min(dragState.x0, dragState.x1), x1 = Math.max(dragState.x0, dragState.x1);
+      const y0 = Math.min(dragState.y0, dragState.y1), y1 = Math.max(dragState.y0, dragState.y1);
+      for (const wp of state.waypoints) {
+        const p = pixelToScreen(worldToPixel(wp.x, wp.z).px, worldToPixel(wp.x, wp.z).py);
+        if (p.sx >= x0 && p.sx <= x1 && p.sy >= y0 && p.sy <= y1) multiIds.add(wp.id);
+      }
+    }
+    renderList();
+    redraw();
+  }
+  dragState = null;
+}
+canvas.addEventListener("pointerup", endDrag);
+canvas.addEventListener("pointercancel", endDrag);
+canvas.addEventListener("pointerleave", () => { updateStatus(-1, -1); hoverId = null; hoverPos = null; redraw(); });
+
+/* 键盘：Shift+方向键/WASD 直线创建点位；A 切换添加模式；Delete 删除选中 */
+function dirFromKey(e) {
+  const k = (e.key || "").toLowerCase();
+  const step = Math.max(0.01, state.stepDist || 10);
+  if (k === "arrowup" || k === "w") return { dx: 0, dz: -step };   // 上 = 北
+  if (k === "arrowdown" || k === "s") return { dx: 0, dz: step };  // 下 = 南
+  if (k === "arrowleft" || k === "a") return { dx: -step, dz: 0 }; // 左 = 西
+  if (k === "arrowright" || k === "d") return { dx: step, dz: 0 }; // 右 = 东
+  return null;
+}
+function createStepWaypoint(dx, dz) {
+  readFields();
+  const base = selectedId && getWp(selectedId);
+  if (!base) { toast("请先选中一个点位作为起点", "err"); return; }
+  const wp = {
+    id: nextWpId(),
+    x: snapCoord(base.x + dx),
+    y: base.y,
+    z: snapCoord(base.z + dz),
+    links: [],
+    _extra: {}
+  };
+  state.waypoints.push(wp);
+  if (state.autoLink) setLink(base.id, wp.id, true);
+  selectedId = wp.id;
+  renderList();
+  renderSelected();
+  redraw();
+  scheduleSave();
+  toast(`已沿方向创建 ${wp.id}（${fmt(wp.x, 2)}, ${fmt(wp.y, 2)}, ${fmt(wp.z, 2)}）`, "ok");
+}
+document.addEventListener("keydown", e => {
+  if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  if (e.shiftKey) {
+    const dir = dirFromKey(e);
+    if (dir) { e.preventDefault(); createStepWaypoint(dir.dx, dir.dz); return; }
+  }
+  if (e.key === "a" || e.key === "A") { toggleAddMode(); }
+  if (e.key === "m" || e.key === "M") { toggleMultiMode(); }
+  if (e.key === "l" || e.key === "L") { toggleLinkMode(); }
+  if (e.key === "Escape") { if (multiIds.size) { multiIds.clear(); renderList(); redraw(); } }
+  if ((e.key === "Delete" || e.key === "Backspace") && selectedId) { deleteWaypoint(selectedId); }
+});
+
+function refreshModeUI() {
+  $("add-mode-state").textContent = addMode ? "开" : "关";
+  $("btn-add-mode").classList.toggle("active", addMode);
+  $("multi-mode-state").textContent = multiMode ? "开" : "关";
+  $("btn-multi-mode").classList.toggle("active", multiMode);
+  $("link-mode-state").textContent = linkMode ? "开" : "关";
+  $("btn-link-mode").classList.toggle("active", linkMode);
+  canvas.classList.toggle("adding", addMode);
+  canvas.classList.toggle("multi", multiMode);
+  canvas.classList.toggle("linking", linkMode);
+}
+function updateLinkModeTip() {
+  $("sb-tip").textContent = linkMode
+    ? (linkStartId ? `连线模式：已选起点 ${linkStartId}，再点另一个点位（再点一次断开）` : "连线模式：先点一个点位作为起点")
+    : "拖拽平移 · 滚轮缩放 · 双击复位";
+}
+function toggleAddMode() {
+  addMode = !addMode;
+  if (addMode) { multiMode = false; linkMode = false; linkStartId = null; }
+  refreshModeUI(); updateLinkModeTip(); redraw(); // 关闭时立刻清掉残留的连接线/绿色预览
+}
+$("btn-add-mode").addEventListener("click", toggleAddMode);
+
+/* 多选模式：点击点位切换选中，拖拽空白框选，用于批量删除 */
+function toggleMultiMode() {
+  multiMode = !multiMode;
+  if (multiMode) { addMode = false; linkMode = false; linkStartId = null; }
+  if (!multiMode) { multiIds.clear(); renderList(); } // 关闭多选后不再保留任何选中
+  refreshModeUI(); updateLinkModeTip(); redraw();
+}
+$("btn-multi-mode").addEventListener("click", toggleMultiMode);
+
+/* 连线模式：地图上点两个点位建立双向连通，再点一次断开（可链式连点） */
+function toggleLinkMode() {
+  linkMode = !linkMode;
+  if (linkMode) { addMode = false; multiMode = false; }
+  else linkStartId = null;
+  refreshModeUI(); updateLinkModeTip(); redraw();
+}
+$("btn-link-mode").addEventListener("click", toggleLinkMode);
+
+/* 像素锐化：关闭 imageSmoothingEnabled，放大保持像素锐利 */
+function updatePixelModeButton() {
+  const on = !state.smoothImage;
+  $("btn-pixel-mode").classList.toggle("active", on);
+  $("pixel-mode-state").textContent = on ? "开" : "关";
+}
+function togglePixelMode() {
+  state.smoothImage = !state.smoothImage;
+  updatePixelModeButton();
+  redraw();
+  scheduleSave();
+}
+$("btn-pixel-mode").addEventListener("click", togglePixelMode);
+
+function updateStatus(sx, sy) {
+  $("sb-zoom").textContent = "缩放: " + fmt(view.scale, 2) + "×";
+  if (sx < 0 || sy < 0 || !state.image) {
+    $("sb-pixel").textContent = "像素: -";
+    $("sb-world").textContent = "世界: -";
+    return;
+  }
+  const { px, py } = screenToPixel(sx, sy);
+  $("sb-pixel").textContent = `像素: (${Math.round(px)}, ${Math.round(py)})`;
+  const w = pixelToWorld(px, py);
+  if (!w) { $("sb-world").textContent = "世界: -"; return; }
+  if (state.snapEnabled) {
+    $("sb-world").textContent = `世界: (${fmt(snapCoord(w.x), 2)}, ${fmt(snapCoord(w.z), 2)}) ⬡ 吸附 ${fmt(state.snapGrid, 2)} 格`;
+  } else {
+    $("sb-world").textContent = `世界: (${fmt(w.x, 2)}, ${fmt(w.z, 2)}) · 吸附关`;
+  }
+}
+
+/* ===================== 渲染 ===================== */
+function resizeCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  const cw = wrap.clientWidth, ch = wrap.clientHeight;
+  canvas.width = Math.round(cw * dpr);
+  canvas.height = Math.round(ch * dpr);
+  canvas.style.width = cw + "px";
+  canvas.style.height = ch + "px";
+  redraw();
+}
+window.addEventListener("resize", resizeCanvas);
+new ResizeObserver(() => resizeCanvas()).observe(wrap);
+
+function redraw() {
+  const dpr = window.devicePixelRatio || 1;
+  const cw = wrap.clientWidth, ch = wrap.clientHeight;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cw, ch);
+  ctx.fillStyle = "#101218";
+  ctx.fillRect(0, 0, cw, ch);
+
+  if (!state.image) return;
+
+  // 背景棋盘格（图片外区域）
+  const cell = 24;
+  ctx.fillStyle = "#161923";
+  ctx.fillRect(0, 0, cw, ch);
+  ctx.fillStyle = "#13151c";
+  for (let x = 0; x < cw; x += cell) for (let y = 0; y < ch; y += cell) {
+    if (((x / cell) + (y / cell)) % 2 === 0) ctx.fillRect(x, y, cell, cell);
+  }
+
+  // 图片（带缩放变换；像素模式关闭平滑插值，放大保持锐利）
+  const { w, h } = imageSize();
+  ctx.setTransform(dpr * view.scale, 0, 0, dpr * view.scale, dpr * view.offsetX, dpr * view.offsetY);
+  ctx.imageSmoothingEnabled = state.smoothImage;
+  ctx.drawImage(state.image, 0, 0, w, h);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  drawGrid(cw, ch);          // 吸附网格线（放大到足够大才画）
+  drawSnapPreview();         // 添加模式下的吸附十字线
+  drawLinkPreview();         // 选中点位到鼠标的实时连接线
+
+  // 连通线（屏幕空间）
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "rgba(255,109,109,.85)";
+  const seen = new Set();
+  for (const wp of state.waypoints) {
+    const a = pixelToScreen(worldToPixel(wp.x, wp.z).px, worldToPixel(wp.x, wp.z).py);
+    for (const lid of wp.links) {
+      const key = [wp.id, lid].sort().join("↔");
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const other = getWp(lid);
+      if (!other) continue;
+      const b = pixelToScreen(worldToPixel(other.x, other.z).px, worldToPixel(other.x, other.z).py);
+      ctx.beginPath();
+      ctx.moveTo(a.sx, a.sy);
+      ctx.lineTo(b.sx, b.sy);
+      ctx.stroke();
+      // 中点小圆
+      ctx.fillStyle = "rgba(255,109,109,.9)";
+      ctx.beginPath();
+      ctx.arc((a.sx + b.sx) / 2, (a.sy + b.sy) / 2, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // 点位标记
+  for (const wp of state.waypoints) {
+    const p = pixelToScreen(worldToPixel(wp.x, wp.z).px, worldToPixel(wp.x, wp.z).py);
+    drawMarker(p.sx, p.sy, wp.id, wp.id === selectedId, wp.id === hoverId, multiIds.has(wp.id), linkMode && wp.id === linkStartId);
+  }
+
+  // 多选框选矩形
+  if (dragState && dragState.mode === "marquee") {
+    const x = Math.min(dragState.x0, dragState.x1);
+    const y = Math.min(dragState.y0, dragState.y1);
+    const w2 = Math.abs(dragState.x1 - dragState.x0);
+    const h2 = Math.abs(dragState.y1 - dragState.y0);
+    ctx.save();
+    ctx.fillStyle = "rgba(78,161,255,.18)";
+    ctx.strokeStyle = "#4ea1ff";
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 3]);
+    ctx.fillRect(x, y, w2, h2);
+    ctx.strokeRect(x, y, w2, h2);
+    ctx.restore();
+  }
+}
+/* 吸附网格：在世界坐标按 snapGrid 画线（1 像素=1 方块的图即 0.5 像素间隔） */
+function drawGrid(cw, ch) {
+  if (!state.snapEnabled || !boundsValid()) return;
+  const g = state.snapGrid;
+  if (!(g > 0)) return;
+  const { w, h } = imageSize();
+  const ppX = w / (state.maxX - state.minX);
+  const ppZ = h / (state.maxZ - state.minZ);
+  const spacing = Math.min(g * ppX, g * ppZ) * view.scale;
+  if (spacing < 3) return; // 太密看不清时不画
+  ctx.lineWidth = 1;
+  // 只画当前视口内的线（线性映射，用左右/上下边缘的像素反推世界范围）
+  const wxLeft = pixelToWorld(screenToPixel(0, 0).px, 0).x;
+  const wxRight = pixelToWorld(screenToPixel(cw, 0).px, 0).x;
+  const i0 = Math.max(Math.ceil(state.minX / g - 1e-9), Math.ceil(Math.min(wxLeft, wxRight) / g - 1e-9));
+  const i1 = Math.min(Math.floor(state.maxX / g + 1e-9), Math.floor(Math.max(wxLeft, wxRight) / g + 1e-9));
+  for (let i = i0; i <= i1; i++) {
+    const wx = i * g;
+    const p = pixelToScreen(worldToPixel(wx, 0).px, 0);
+    const x = Math.round(p.sx) + 0.5;
+    ctx.strokeStyle = i % 2 === 0 ? "rgba(255,255,255,0.30)" : "rgba(255,255,255,0.12)";
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, ch); ctx.stroke();
+  }
+  const wzTop = pixelToWorld(0, screenToPixel(0, 0).py).z;
+  const wzBottom = pixelToWorld(0, screenToPixel(0, ch).py).z;
+  const j0 = Math.max(Math.ceil(state.minZ / g - 1e-9), Math.ceil(Math.min(wzTop, wzBottom) / g - 1e-9));
+  const j1 = Math.min(Math.floor(state.maxZ / g + 1e-9), Math.floor(Math.max(wzTop, wzBottom) / g + 1e-9));
+  for (let j = j0; j <= j1; j++) {
+    const wz = j * g;
+    const p = pixelToScreen(0, worldToPixel(0, wz).py);
+    const y = Math.round(p.sy) + 0.5;
+    ctx.strokeStyle = j % 2 === 0 ? "rgba(255,255,255,0.30)" : "rgba(255,255,255,0.12)";
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(cw, y); ctx.stroke();
+  }
+}
+/* 添加模式下鼠标位置的吸附预览（点下去就会标在这个位置） */
+function drawSnapPreview() {
+  if (!addMode || !state.image || !hoverPos || dragState) return;
+  if (!boundsValid()) return;
+  const { px, py } = screenToPixel(hoverPos.sx, hoverPos.sy);
+  const w = pixelToWorld(px, py);
+  if (!w) return;
+  const wx = snapCoord(w.x), wz = snapCoord(w.z);
+  const p = pixelToScreen(worldToPixel(wx, wz).px, worldToPixel(wx, wz).py);
+  const R = 9;
+  ctx.save();
+  ctx.strokeStyle = "#7dffa0";
+  ctx.lineWidth = 1.2;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  ctx.arc(p.sx, p.sy, R, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([2, 3]);
+  ctx.beginPath();
+  ctx.moveTo(p.sx - R - 5, p.sy); ctx.lineTo(p.sx - R + 4, p.sy);
+  ctx.moveTo(p.sx + R - 4, p.sy); ctx.lineTo(p.sx + R + 5, p.sy);
+  ctx.moveTo(p.sx, p.sy - R - 5); ctx.lineTo(p.sx, p.sy - R + 4);
+  ctx.moveTo(p.sx, p.sy + R - 4); ctx.lineTo(p.sx, p.sy + R + 5);
+  ctx.stroke();
+  ctx.fillStyle = "rgba(125,255,160,.9)";
+  ctx.beginPath();
+  ctx.arc(p.sx, p.sy, 2.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+/* 选中点位/连线起点到鼠标的实时连接线（虚线）：添加模式下指向吸附落点，连线模式下跟随鼠标 */
+function drawLinkPreview() {
+  const anchor = addMode ? selectedId : (linkMode ? linkStartId : null);
+  if (!anchor || !hoverPos || !state.image || dragState) return;
+  const sel = getWp(anchor);
+  if (!sel) return;
+  const a = pixelToScreen(worldToPixel(sel.x, sel.z).px, worldToPixel(sel.x, sel.z).py);
+  let tx = hoverPos.sx, ty = hoverPos.sy;
+  if (addMode && boundsValid()) {
+    const { px, py } = screenToPixel(hoverPos.sx, hoverPos.sy);
+    const w = pixelToWorld(px, py);
+    if (w) {
+      const sp = pixelToScreen(worldToPixel(snapCoord(w.x), snapCoord(w.z)).px, worldToPixel(snapCoord(w.x), snapCoord(w.z)).py);
+      tx = sp.sx; ty = sp.sy;
+    }
+  }
+  ctx.save();
+  ctx.strokeStyle = "rgba(255,211,77,.85)";
+  ctx.lineWidth = 1.6;
+  ctx.setLineDash([7, 5]);
+  ctx.beginPath();
+  ctx.moveTo(a.sx, a.sy);
+  ctx.lineTo(tx, ty);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+function drawMarker(sx, sy, id, selected, hover, multi, linkStart) {
+  const r = selected ? 7 : hover ? 6.5 : 6;
+  ctx.beginPath();
+  ctx.arc(sx, sy, r, 0, Math.PI * 2);
+  ctx.fillStyle = selected ? "#ffd34d" : hover ? "#7dffa0" : "#4ea1ff";
+  ctx.fill();
+  ctx.lineWidth = selected ? 2.5 : 1.5;
+  ctx.strokeStyle = "#0d0f13";
+  ctx.stroke();
+  if (selected) {
+    ctx.beginPath();
+    ctx.arc(sx, sy, r + 4, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255,211,77,.55)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+  if (multi) {
+    // 多选高亮：白色虚线外环
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(sx, sy, r + 7, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255,255,255,.9)";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([3, 2]);
+    ctx.stroke();
+    ctx.restore();
+  }
+  if (linkStart) {
+    // 连线起点：橙色虚线外环
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(sx, sy, r + 10, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255,159,67,.95)";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 3]);
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.font = "11px Consolas, monospace";
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = "rgba(0,0,0,.75)";
+  ctx.fillStyle = "#ffffff";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  const tx = sx + r + 3, ty = sy - r - 3;
+  ctx.strokeText(id, tx, ty);
+  ctx.fillText(id, tx, ty);
+}
+
+/* ===================== 列表 / 表单 ===================== */
+function renderList() {
+  $("wp-count").textContent = state.waypoints.length;
+  $("multi-count").textContent = multiIds.size;
+  $("btn-delete-multi").classList.toggle("hidden", multiIds.size === 0);
+  $("btn-clear-multi").classList.toggle("hidden", multiIds.size === 0);
+  const box = $("wp-list");
+  if (!state.waypoints.length) {
+    box.innerHTML = '<div class="wp-empty">还没有点位。打开「添加点位模式」后在地图上点击即可添加。</div>';
+    return;
+  }
+  box.innerHTML = "";
+  for (const wp of state.waypoints) {
+    const multi = multiIds.has(wp.id);
+    const row = document.createElement("div");
+    row.className = "wp-row" + (wp.id === selectedId ? " selected" : "") + (multi ? " multi" : "");
+    row.innerHTML =
+      `<span class="dot" style="background:${multi ? "#ffffff" : wp.id === selectedId ? "#ffd34d" : "#4ea1ff"}"></span>` +
+      `<span class="wp-id">${esc(wp.id)}</span>` +
+      `<span class="wp-xyz">${fmt(wp.x, 2)}, ${fmt(wp.y, 2)}, ${fmt(wp.z, 2)}</span>` +
+      (wp.links.length ? `<span class="wp-links">🔗${wp.links.length}</span>` : "");
+    row.addEventListener("click", () => {
+      selectedId = wp.id;
+      if (multiMode) { // 多选模式下点列表项也切换多选
+        if (multiIds.has(wp.id)) multiIds.delete(wp.id); else multiIds.add(wp.id);
+      }
+      renderList(); renderSelected(); redraw();
+    });
+    box.appendChild(row);
+  }
+}
+function deleteMultiSelected() {
+  const ids = Array.from(multiIds);
+  if (!ids.length) return;
+  const n = ids.length;
+  const del = new Set(ids);
+  state.waypoints = state.waypoints.filter(w => !del.has(w.id));
+  state.waypoints.forEach(w => { w.links = w.links.filter(l => !del.has(l)); });
+  if (selectedId && del.has(selectedId)) selectedId = null;
+  multiIds.clear();
+  renderList();
+  renderSelected();
+  redraw();
+  scheduleSave();
+  toast(`已删除 ${n} 个点位`, "ok");
+}
+$("btn-delete-multi").addEventListener("click", deleteMultiSelected);
+$("btn-clear-multi").addEventListener("click", () => {
+  multiIds.clear();
+  renderList();
+  redraw();
+});
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function renderSelected() {
+  const wp = selectedId ? getWp(selectedId) : null;
+  $("selected-empty").classList.toggle("hidden", !!wp);
+  $("selected-form").classList.toggle("hidden", !wp);
+  if (!wp) return;
+  $("f-wp-id").value = wp.id;
+  $("f-wp-x").value = wp.x;
+  $("f-wp-y").value = wp.y;
+  $("f-wp-z").value = wp.z;
+  renderLinks();
+}
+/* 连通点位管理：已连通的 chips（✕ 断开）+ 按 ID 筛选勾选 */
+function renderLinks() {
+  const wp = selectedId ? getWp(selectedId) : null;
+  const chips = $("link-chips");
+  const box = $("link-filter-list");
+  if (!wp) { chips.innerHTML = ""; box.innerHTML = ""; return; }
+  chips.innerHTML = "";
+  if (!wp.links.length) {
+    chips.innerHTML = '<span class="hint" style="margin:0">无</span>';
+  } else {
+    for (const id of wp.links.slice().sort()) {
+      const chip = document.createElement("span");
+      chip.className = "link-chip";
+      const txt = document.createElement("span");
+      txt.textContent = id;
+      const btn = document.createElement("button");
+      btn.className = "chip-x";
+      btn.title = "断开与 " + id + " 的连通";
+      btn.textContent = "✕";
+      btn.addEventListener("click", () => {
+        setLink(wp.id, id, false);
+        renderList(); renderSelected(); redraw(); scheduleSave();
+      });
+      chip.appendChild(txt);
+      chip.appendChild(btn);
+      chips.appendChild(chip);
+    }
+  }
+  const q = ($("f-link-filter").value || "").trim().toLowerCase();
+  box.innerHTML = "";
+  let shown = 0;
+  for (const other of state.waypoints) {
+    if (other.id === wp.id) continue;
+    if (q && !other.id.toLowerCase().includes(q)) continue;
+    shown++;
+    const label = document.createElement("label");
+    label.className = "link-item";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = wp.links.includes(other.id);
+    cb.addEventListener("change", () => {
+      setLink(wp.id, other.id, cb.checked);
+      renderList(); renderLinks(); redraw(); scheduleSave();
+    });
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(`${other.id}  (${fmt(other.x)}, ${fmt(other.z)})`));
+    box.appendChild(label);
+  }
+  if (!shown) {
+    box.innerHTML = q
+      ? '<div class="hint" style="margin:0">无匹配点位</div>'
+      : '<div class="hint" style="margin:0">输入关键字筛选后勾选，或按 <kbd>L</kbd> 用地图连线模式</div>';
+  }
+}
+$("f-link-filter").addEventListener("input", renderLinks);
+/* 表单修改实时自动应用（不需要点应用按钮） */
+$("f-wp-x").addEventListener("input", () => {
+  const wp = selectedId && getWp(selectedId);
+  if (!wp) return;
+  const v = parseFloat($("f-wp-x").value);
+  if (isFinite(v)) { wp.x = v; renderList(); redraw(); scheduleSave(); }
+});
+$("f-wp-y").addEventListener("input", () => {
+  const wp = selectedId && getWp(selectedId);
+  if (!wp) return;
+  const v = parseFloat($("f-wp-y").value);
+  if (isFinite(v)) { wp.y = v; renderList(); scheduleSave(); }
+});
+$("f-wp-z").addEventListener("input", () => {
+  const wp = selectedId && getWp(selectedId);
+  if (!wp) return;
+  const v = parseFloat($("f-wp-z").value);
+  if (isFinite(v)) { wp.z = v; renderList(); redraw(); scheduleSave(); }
+});
+$("f-wp-id").addEventListener("input", () => {
+  const wp = selectedId && getWp(selectedId);
+  if (!wp) return;
+  const v = $("f-wp-id").value.trim();
+  if (!v || (v !== wp.id && getWp(v))) {
+    $("f-wp-id").classList.add("invalid"); // 空或重复：暂不应用，红框提示
+    return;
+  }
+  $("f-wp-id").classList.remove("invalid");
+  if (v !== wp.id) {
+    const old = wp.id;
+    wp.id = v;
+    // 其它点位 links 里的旧 ID 同步改名
+    state.waypoints.forEach(w => { if (w.id !== wp.id) w.links = w.links.map(l => l === old ? wp.id : l); });
+    selectedId = wp.id;
+    renderList();
+    renderSelected();
+    redraw();
+    scheduleSave();
+  }
+});
+$("btn-delete-wp").addEventListener("click", () => {
+  if (selectedId) deleteWaypoint(selectedId);
+});
+$("btn-snap-wp").addEventListener("click", () => {
+  const wp = selectedId && getWp(selectedId);
+  if (!wp) return;
+  const nx = snapCoord(wp.x), nz = snapCoord(wp.z);
+  wp.x = nx; wp.z = nz;
+  renderList(); renderSelected(); redraw(); scheduleSave();
+  toast(`已吸附到网格：(${fmt(nx, 2)}, ${fmt(nz, 2)})`, "ok");
+});
+
+/* ===================== 导入 JSON / images.yml ===================== */
+function importJsonText(text, fileNameHint) {
+  let data;
+  try { data = JSON.parse(text); } catch (e) { toast("JSON 解析失败：" + e.message, "err"); return false; }
+  if (!data || !Array.isArray(data.waypoints)) { toast("格式不对：缺少 waypoints 数组", "err"); return false; }
+  state.waypoints = data.waypoints.map(normalizeWp);
+  if (typeof data.world === "string" && data.world) state.world = data.world;
+  // 用户主动选择导入哪个文件，就用文件名作为地图 ID（若提供了文件名提示）
+  if (fileNameHint) state.mapId = fileNameHint.replace(/\.json$/i, "");
+  writeFields();
+  renderList(); renderSelected(); redraw(); scheduleSave();
+  toast(`已导入 ${state.waypoints.length} 个点位`, "ok");
+  return true;
+}
+/* ===================== 选择点位文件（绑定后实时写回） ===================== */
+async function openWaypointFile() {
+  // 浏览器支持 File System Access API（Chrome/Edge）时，直接拿到文件句柄以便实时写回
+  if (window.showOpenFilePicker) {
+    let handle;
+    const opts = {
+      types: [{ description: "星轨点位文件 (JSON)", accept: { "application/json": [".json"] } }],
+      multiple: false
+    };
+    const dir = await loadDirFromDb(); // 记住的上次文件所在目录
+    if (dir) {
+      // startIn 的目录句柄必须有权限，否则 Chrome 会静默回退到默认（文档）目录。
+      // 按钮点击手势内可以请求授权：未授权先弹一次"允许访问此文件夹"。
+      try {
+        let perm = await dir.queryPermission({ mode: "read" });
+        if (perm === "prompt") {
+          toast("请允许访问上次的文件夹（只用于让选择框直接打开该目录）");
+          perm = await dir.requestPermission({ mode: "read" });
+        }
+        if (perm === "granted") {
+          opts.startIn = dir; // 选择框直接打开上次的目录，而不是默认文档目录
+          $("btn-open-waypoints").title = `选择点位文件（上次目录：${dir.name || "?"}）`;
+        }
+      } catch (e) { /* 句柄失效则不用 startIn，走默认目录 */ }
+    }
+    try {
+      [handle] = await window.showOpenFilePicker(opts);
+    } catch (e) {
+      if (e && e.name === "AbortError") return; // 用户取消选择
+      if (opts.startIn) {
+        // 起始目录已失效（被移动/删除）时去掉 startIn 重试一次
+        delete opts.startIn;
+        try {
+          [handle] = await window.showOpenFilePicker(opts);
+        } catch (e2) {
+          if (e2 && e2.name === "AbortError") return;
+          handle = null;
+        }
+      } else {
+        handle = null; // 打开失败 -> 走普通文件选择兜底
+      }
+    }
+    if (handle) {
+      try {
+        const file = await handle.getFile();
+        const text = await file.text();
+        const ok = importJsonText(text, file.name);
+        if (ok) {
+          fileHandle = handle;
+          await persistLastFile(handle); // 记住文件（下次自动恢复）+ 记住所在目录（下次选择框起始目录）
+          lastFileHandle = null;
+          updateRestoreButton();
+          updateFileIndicator();
+          toast(`已选择 ${file.name}，之后修改会实时写回该文件`, "ok");
+        }
+      } catch (e) {
+        toast("读取文件失败：" + (e.message || "未知错误"), "err");
+      }
+      return;
+    }
+  }
+  // 兜底（Firefox/Safari 等）：只能一次性读取，无法自动写回
+  fileHandle = null;
+  lastFileHandle = null;
+  updateRestoreButton();
+  updateFileIndicator();
+  $("file-json").click();
+}
+function updateFileIndicator() {
+  const el = $("file-indicator");
+  if (fileHandle && fileHandle.name) {
+    $("file-name-show").textContent = fileHandle.name;
+    el.classList.remove("hidden");
+  } else {
+    el.classList.add("hidden");
+  }
+}
+
+/* ---------- 记忆上次选择的点位文件（FileSystemHandle 存 IndexedDB，下次自动恢复） ---------- */
+let lastFileHandle = null; // 上次文件但权限需要重新确认时的待恢复句柄
+function dbOpen() {
+  return new Promise((resolve, reject) => {
+    if (typeof indexedDB === "undefined") { reject(new Error("no indexedDB")); return; }
+    const req = indexedDB.open("mmap-waypoint-editor", 1);
+    req.onupgradeneeded = () => { req.result.createObjectStore("handles"); };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error || new Error("idb open failed"));
+  });
+}
+async function saveHandleToDb(handle) {
+  try {
+    const db = await dbOpen();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction("handles", "readwrite");
+      const req = tx.objectStore("handles").put(handle, "waypointFile");
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error || new Error("save failed"));
+    });
+    db.close();
+  } catch (e) { /* 浏览器/环境不支持时静默降级，不影响正常使用 */ }
+}
+async function loadHandleFromDb() {
+  try {
+    const db = await dbOpen();
+    const val = await new Promise((resolve, reject) => {
+      const tx = db.transaction("handles", "readonly");
+      const req = tx.objectStore("handles").get("waypointFile");
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error || new Error("load failed"));
+    });
+    db.close();
+    return val || null;
+  } catch (e) { return null; }
+}
+/* 记住文件所在目录（选择框的起始目录），避免每次打开都回到默认文档目录 */
+async function saveDirToDb(dir) {
+  try {
+    const db = await dbOpen();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction("handles", "readwrite");
+      const req = tx.objectStore("handles").put(dir, "waypointDir");
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error || new Error("save dir failed"));
+    });
+    db.close();
+  } catch (e) { /* 忽略 */ }
+}
+async function loadDirFromDb() {
+  try {
+    const db = await dbOpen();
+    const val = await new Promise((resolve, reject) => {
+      const tx = db.transaction("handles", "readonly");
+      const req = tx.objectStore("handles").get("waypointDir");
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error || new Error("load dir failed"));
+    });
+    db.close();
+    return val || null;
+  } catch (e) { return null; }
+}
+/* 记住文件 + 它所在的目录（一次调用两个都存）。
+   getParent 不可用的浏览器（旧版 Edge 等）自动跳过目录记忆，不报错、不覆盖已有记忆；
+   目录记忆交给「📁 记住目录」按钮（showDirectoryPicker，不依赖 getParent）。 */
+async function persistLastFile(handle) {
+  try { await saveHandleToDb(handle); } catch (e) { /* 忽略：不阻塞主流程 */ }
+  if (handle && typeof handle.getParent === "function") {
+    try {
+      const dir = await handle.getParent();
+      if (dir) {
+        try {
+          const perm = await dir.queryPermission({ mode: "read" });
+          if (perm === "prompt") await dir.requestPermission({ mode: "read" });
+          await saveDirToDb(dir);
+          try { localStorage.setItem("mmap-last-dir", dir.name || ""); } catch (e) { /* 忽略 */ }
+        } catch (e) {
+          showDirError("目录授权/保存失败：" + ((e && e.message) || e) + " —— 可点「📁 记住目录」手动指定");
+          return;
+        }
+      }
+    } catch (e) {
+      showDirError("获取父目录失败：" + ((e && e.message) || e) + " —— 可点「📁 记住目录」手动指定");
+      return;
+    }
+  }
+  // 已有目录记忆（手动「记住目录」存的）保持不变；完全没有时才显示浅色提示
+  const existing = await loadDirFromDb();
+  if (!existing) {
+    try {
+      if (!localStorage.getItem("mmap-last-dir")) {
+        $("dir-name-show").textContent = "当前浏览器不支持自动记住目录，可点「📁 记住目录」手动指定";
+        const el = $("dir-indicator");
+        el.style.color = "var(--muted)";
+        el.classList.remove("hidden");
+        return;
+      }
+    } catch (e) { /* 忽略 */ }
+  }
+  await updateDirIndicator();
+}
+function showDirError(msg) {
+  const el = $("dir-indicator");
+  $("dir-name-show").textContent = msg;
+  el.style.color = "var(--danger)";
+  el.classList.remove("hidden");
+  toast(msg, "err");
+}
+/* 显示记住的上次目录（用于确认记忆是否生效 / 排查问题） */
+async function updateDirIndicator() {
+  const dir = await loadDirFromDb();
+  const el = $("dir-indicator");
+  const nameEl = $("dir-name-show");
+  let name = "", stale = false;
+  if (dir && dir.name) {
+    name = dir.name;
+  } else {
+    try { name = localStorage.getItem("mmap-last-dir") || ""; stale = !!name; } catch (e) { name = ""; }
+  }
+  el.style.color = "var(--muted)";
+  if (name) {
+    nameEl.textContent = name + (stale ? "（句柄失效，重选一次可恢复）" : "");
+    el.classList.remove("hidden");
+  } else {
+    el.classList.add("hidden");
+  }
+}
+/* 手动记住目录：选一次文件夹，之后「选择点位图文件」直接打开它（最可靠的方案） */
+$("btn-set-dir").addEventListener("click", async () => {
+  if (!window.showDirectoryPicker) { toast("当前浏览器不支持选择文件夹", "err"); return; }
+  try {
+    const dir = await window.showDirectoryPicker();
+    try { await dir.requestPermission({ mode: "read" }); } catch (e) { /* 忽略 */ }
+    await saveDirToDb(dir);
+    try { localStorage.setItem("mmap-last-dir", dir.name || ""); } catch (e) { /* 忽略 */ }
+    await updateDirIndicator();
+    toast(`已记住目录：${dir.name}，之后选择框会直接打开这里`, "ok");
+  } catch (e) {
+    if (e && e.name === "AbortError") return; // 用户取消
+    toast("记住目录失败：" + ((e && e.message) || e), "err");
+  }
+});
+function updateRestoreButton() {
+  $("btn-restore-file").classList.toggle("hidden", !lastFileHandle);
+}
+/* 页面加载时尝试恢复上次的点位文件：权限仍有效则直接自动打开；否则显示「重开上次文件」按钮 */
+async function restoreLastFile() {
+  if (!window.showOpenFilePicker) return; // 不支持该 API 的浏览器没有可恢复的句柄
+  const handle = await loadHandleFromDb();
+  if (!handle) return;
+  let perm = "denied";
+  try { perm = await handle.queryPermission({ mode: "readwrite" }); } catch (e) { perm = "denied"; }
+  if (perm === "granted") {
+    try {
+      const file = await handle.getFile();
+      const text = await file.text();
+      const ok = importJsonText(text, file.name);
+      if (ok) {
+        fileHandle = handle;
+        await persistLastFile(handle); // 顺带更新目录记忆
+        updateFileIndicator();
+        toast(`已自动打开上次的点位文件 ${file.name}`, "ok");
+      }
+    } catch (e) { /* 读取失败则等用户手动选择 */ }
+  } else {
+    lastFileHandle = handle; // 需要用户点一下重新授权（浏览器要求手势）
+    updateRestoreButton();
+  }
+}
+$("btn-restore-file").addEventListener("click", async () => {
+  const handle = lastFileHandle;
+  if (!handle) return;
+  try {
+    const perm = await handle.requestPermission({ mode: "readwrite" });
+    if (perm !== "granted") { toast("未获得该文件的读写权限", "err"); return; }
+    const file = await handle.getFile();
+    const text = await file.text();
+    const ok = importJsonText(text, file.name);
+    if (ok) {
+      fileHandle = handle;
+      await persistLastFile(handle); // 记住文件 + 目录
+      lastFileHandle = null;
+      updateRestoreButton();
+      updateFileIndicator();
+      toast(`已打开 ${file.name}，之后修改会实时写回`, "ok");
+    }
+  } catch (e) {
+    toast("打开失败：" + (e.message || "未知错误"), "err");
+  }
+});
+/* 把当前点位数据写回绑定的文件（串行执行，防并发覆盖） */
+function saveToFile() {
+  if (!fileHandle) return fileWriteChain;
+  const content = buildWaypointJson() + "\n";
+  fileWriteChain = fileWriteChain.then(async () => {
+    try {
+      const writable = await fileHandle.createWritable();
+      await writable.write(content);
+      await writable.close();
+    } catch (e) {
+      fileHandle = null; // 写回失败（文件被移动/权限失效）则解除绑定
+      updateFileIndicator();
+      toast("写回文件失败：" + (e.message || "权限失效") + "，已解除绑定，请重新选择文件", "err");
+    }
+  });
+  return fileWriteChain;
+}
+$("btn-open-waypoints").addEventListener("click", openWaypointFile);
+$("file-json").addEventListener("change", e => {
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+  fileHandle = null; // 普通选择是一次性读取，不绑定实时写回
+  lastFileHandle = null;
+  updateRestoreButton();
+  updateFileIndicator();
+  const reader = new FileReader();
+  reader.onload = () => importJsonText(reader.result, f.name);
+  reader.readAsText(f, "utf-8");
+  if (!window.showOpenFilePicker) {
+    toast("当前浏览器不支持实时写回文件，修改后请用「导出」保存（建议使用 Chrome / Edge）", "err");
+  }
+  e.target.value = "";
+});
+$("btn-parse-json").addEventListener("click", () => {
+  const text = $("paste-area").value;
+  if (!text.trim()) { toast("请先粘贴内容", "err"); return; }
+  importJsonText(text, "");
+});
+$("btn-parse-yaml").addEventListener("click", () => {
+  const text = $("paste-area").value;
+  if (!text.trim()) { toast("请先粘贴内容", "err"); return; }
+  parseYamlSnippet(text);
+});
+function parseYamlSnippet(text) {
+  // 支持从 images.yml 里贴一段，如：
+  //   main_map:
+  //     fileName: overworld.png
+  //     world: world
+  //     minX: -1000 ...
+  const lines = text.split(/\r?\n/);
+  let mapId = state.mapId;
+  const m = text.match(/^\s{2}([A-Za-z0-9_\-]+):\s*$/m);
+  if (m) mapId = m[1];
+  const kv = {};
+  for (const line of lines) {
+    const mm = line.match(/^\s*([A-Za-z0-9_]+)\s*:\s*(.+?)\s*$/);
+    if (mm) kv[mm[1].toLowerCase()] = mm[2].trim();
+  }
+  if (mapId) state.mapId = mapId;
+  if (kv["filename"]) state.fileName = kv["filename"];
+  if (kv["world"]) state.world = kv["world"];
+  ["minx", "minz", "maxx", "maxz"].forEach(k => { if (kv[k] !== undefined) state[k === "minx" ? "minX" : k === "minz" ? "minZ" : k === "maxx" ? "maxX" : "maxZ"] = num(kv[k]); });
+  writeFields();
+  updateRatioWarn();
+  renderList(); renderSelected(); redraw(); scheduleSave();
+  toast("已从 images.yml 片段载入地图设置", "ok");
+}
+
+/* ===================== 导出 ===================== */
+function buildWaypointJson() {
+  readFields();
+  const wps = state.waypoints.map(w => {
+    const o = { id: w.id, x: w.x, y: w.y, z: w.z, links: w.links.slice() };
+    Object.assign(o, w._extra || {});
+    return o;
+  });
+  return JSON.stringify({ world: state.world, waypoints: wps }, null, 2);
+}
+function buildYamlSnippet() {
+  readFields();
+  return [
+    `  ${state.mapId || "(地图ID)"}:`,
+    `    fileName: ${state.fileName || "(图片文件名)"}`,
+    `    world: ${state.world || "(世界)"}`,
+    `    minX: ${state.minX}`,
+    `    minZ: ${state.minZ}`,
+    `    maxX: ${state.maxX}`,
+    `    maxZ: ${state.maxZ}`
+  ].join("\n");
+}
+function download(name, content, mime) {
+  const blob = new Blob([content], { type: mime || "application/octet-stream" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+$("btn-export-json").addEventListener("click", () => {
+  if (!state.mapId) { toast("请先填写地图 ID", "err"); return; }
+  const name = sanitize(state.mapId) + ".json";
+  const content = buildWaypointJson() + "\n";
+  download(name, content, "application/json");
+  const out = $("json-out");
+  out.value = content;
+  out.classList.remove("hidden");
+  toast("已导出 " + name, "ok");
+});
+$("btn-export-yaml").addEventListener("click", () => {
+  const name = (state.mapId ? sanitize(state.mapId) : "map") + "-images.yml";
+  const content = buildYamlSnippet() + "\n";
+  download(name, content, "text/yaml");
+  const out = $("yaml-out");
+  out.value = content;
+  out.classList.remove("hidden");
+  toast("已导出 images.yml 片段", "ok");
+});
+
+/* ===================== 初始化 ===================== */
+resizeCanvas();
+loadState();
+updatePixelModeButton();
+restoreLastFile().then(updateDirIndicator); // 尝试自动恢复上次选择的点位文件；顺带显示上次目录
+if (!state.image) {
+  // 无图片时不显示棋盘，恢复初始背景
+  redraw();
+}
+renderList();
+renderSelected();
+updateRatioWarn();
+</script>
+</body>
+</html>

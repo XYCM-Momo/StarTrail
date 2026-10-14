@@ -6,7 +6,7 @@
 .DESCRIPTION
     1. 从 plugin-paper\src\main\resources\plugin.yml 读出版本号；
     2. 调用 plugin-paper\gradlew.bat build；
-    3. 把 build\libs\MMmap-Plugin-<版本>.jar 复制到 dist\server-plugin\；
+    3. 把 build\libs\StarTrail-Plugin-<版本>.jar 复制到 dist\server-plugin\；
     4. 刷新 dist\SHA256SUMS.txt。
 
     版本号只认 plugin.yml 的 version 一处（见 VERSIONING.md）。
@@ -69,7 +69,7 @@ finally {
 }
 if ($code -ne 0) { throw "Gradle 构建失败，退出码 $code" }
 
-$built = Join-Path $Proj ("build\libs\MMmap-Plugin-{0}.jar" -f $Version)
+$built = Join-Path $Proj ("build\libs\StarTrail-Plugin-{0}.jar" -f $Version)
 if (-not (Test-Path $built)) { throw "构建产物不存在: $built" }
 
 Write-Host ''
@@ -78,7 +78,7 @@ Write-Host ("构建成功: {0}  ({1:N0} 字节)" -f $built, (Get-Item $built).Le
 if ($NoPublish) { return }
 
 if (-not (Test-Path $Dist)) { New-Item -ItemType Directory -Path $Dist -Force | Out-Null }
-$target = Join-Path $Dist ("MMmap-Plugin-{0}.jar" -f $Version)
+$target = Join-Path $Dist ("StarTrail-Plugin-{0}.jar" -f $Version)
 Copy-Item $built $target -Force
 Write-Host ("已发布: {0}" -f $target) -ForegroundColor Green
 

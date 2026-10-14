@@ -1,14 +1,14 @@
-# MMmap 版本规划与发布流程
+# 星轨 StarTrail 版本规划与发布流程
 
 ## 1. 三个版本号，各管各的
 
-MMmap 由两个可独立升级的部件组成，各自有自己的版本号，**不要混用**：
+星轨 StarTrail 由两个可独立升级的部件组成，各自有自己的版本号，**不要混用**：
 
 | 部件 | 版本号写在哪（唯一事实来源） | 当前值 |
 |---|---|---|
 | Forge 客户端模组 | `mod-forge/gradle.properties` → `mod_version` | `1.9.5` |
 | Fabric 客户端模组（上游原版） | 上游 jar 自带，我们不写 | `1.9.5` |
-| 服务端 Paper 插件 | `dist/server-plugin/MMmap-Plugin-1.9.4.jar` 内的 `plugin.yml` | `1.9.4` |
+| 服务端 Paper 插件 | `dist/server-plugin/StarTrail-Plugin-1.9.4.jar` 内的 `plugin.yml` | `1.9.4` |
 
 > 改模组版本**只改 `gradle.properties` 一处**：`build-mod.ps1` 会读出它决定产物名，
 > `build.gradle` 也会把它展开进 `mods.toml`。别去手改 `mods.toml`。
@@ -19,13 +19,13 @@ MMmap 由两个可独立升级的部件组成，各自有自己的版本号，**
 
 | 平台 | 文件名格式 | 例 |
 |---|---|---|
-| Forge | `mmap-forge-<版本>.jar` | `mmap-forge-1.9.7.jar` |
+| Forge | `startrail-forge-<版本>.jar` | `startrail-forge-1.9.7.jar` |
 | Fabric | `mmap-fabric-<版本>.jar` | `mmap-fabric-1.9.5.jar` |
-| 服务端插件 | `MMmap-Plugin-<版本>.jar` | `MMmap-Plugin-1.9.4.jar` |
+| 服务端插件 | `StarTrail-Plugin-<版本>.jar` | `StarTrail-Plugin-1.9.4.jar` |
 
-Gradle 构建出来的原始文件名叫 `mmap-<版本>.jar`（`archivesName = mmap`），发布时由
-`tools\build-mod.ps1` 自动改名成 `mmap-forge-<版本>.jar` 放进 `dist\client-mod\`。
-**不要把 `build\libs\mmap-<版本>.jar` 直接发给别人**，那个名字和 Fabric 版会撞车。
+Gradle 构建出来的原始文件名叫 `startrail-<版本>.jar`（`archivesName = startrail`），发布时由
+`tools\build-mod.ps1` 自动改名成 `startrail-forge-<版本>.jar` 放进 `dist\client-mod\`。
+**不要把 `build\libs\startrail-<版本>.jar` 直接发给别人**，那个名字和 Fabric 版会撞车。
 
 ## 3. 什么时候加版本号
 
@@ -106,7 +106,7 @@ Gradle 构建出来的原始文件名叫 `mmap-<版本>.jar`（`archivesName = m
 | 想回到 | 从哪拿 |
 |---|---|
 | 上一个发布版本的成品 jar | `releases\<对应目录>\` |
-| 某个时间点的整套工作区（含源码、工具、文档） | `backups\MMmap_<时间戳>_<标签>.zip`，直接解压覆盖回工作区 |
+| 某个时间点的整套工作区（含源码、工具、文档） | `backups\StarTrail_<时间戳>_<标签>.zip`，直接解压覆盖回工作区 |
 | 只回滚某个文件 | 同上，从 zip 里单独取 |
 
 回滚后**记得同步把 `dist\` 里被覆盖的 jar 也换回去**，`dist` 必须始终等于「当前在用的一组」。
@@ -116,9 +116,9 @@ Gradle 构建出来的原始文件名叫 `mmap-<版本>.jar`（`archivesName = m
 
 * **什么时候备份**：改动代码/配置前、发布后、动工作区结构前。`backup.ps1` 只要几秒。
 * **存在哪**：默认 `<工作区>\backups\`（快照会自动排除 `backups\` 自身，不会套娃）。
-  强烈建议定期把 `backups\` 整个复制到**别的盘**，例如 `E:\Minecraft\_backups\MMmap\`：
+  强烈建议定期把 `backups\` 整个复制到**别的盘**，例如 `E:\Minecraft\_backups\StarTrail\`：
   ```powershell
-  robocopy "E:\Minecraft\服务器\插件\MMmap\backups" "E:\Minecraft\_backups\MMmap" /MIR
+  robocopy "E:\Minecraft\服务器\插件\StarTrail\backups" "E:\Minecraft\_backups\StarTrail" /MIR
   ```
 * **保留多少**：默认 `-Prune -Keep 20` 留最近 20 份。一份约 6~10MB（已排除 Gradle 构建产物）。
 * **快照里有什么/没什么**：有源码、成品 jar、文档、`archive\port-work` 全套中间产物；

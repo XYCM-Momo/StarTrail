@@ -1,10 +1,10 @@
 ﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
-    MMmap 工作区快照备份。
+    星轨 StarTrail 工作区快照备份。
 
 .DESCRIPTION
-    把整个 MMmap 工作区打包成带时间戳的 zip 放进 backups\ 目录。
+    把整个工作区打包成带时间戳的 zip 放进 backups\ 目录。
     默认排除 backups\ 自身和 Gradle 构建产物（build\、.gradle\）——这些随时能重新生成，
     排除后一个快照大约 10MB 左右，可以放心多留几份。
 
@@ -13,7 +13,7 @@
 
 .PARAMETER Destination
     备份存放目录，默认 <工作区>\backups。
-    建议再定期把这个目录复制到别的盘（例如 E:\Minecraft\_backups\MMmap）。
+    建议再定期把这个目录复制到别的盘（例如 E:\Minecraft\_backups\StarTrail）。
 
 .PARAMETER List
     只列出已有快照，不创建新的。
@@ -54,7 +54,8 @@ if (-not $Destination) { $Destination = Join-Path $Root 'backups' }
 if (-not (Test-Path $Destination)) { New-Item -ItemType Directory -Path $Destination -Force | Out-Null }
 
 function Get-Snapshots {
-    Get-ChildItem -Path $Destination -Filter 'MMmap_*.zip' -File -ErrorAction SilentlyContinue |
+    Get-ChildItem -Path $Destination -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match '^(StarTrail|MMmap)_.*\.zip$' } |
         Sort-Object LastWriteTime -Descending
 }
 
@@ -85,6 +86,8 @@ if ($Prune) {
 $exclude = @('backups\')
 if (-not $IncludeBuild) {
     $exclude += @('mod-forge\build\', 'mod-forge\.gradle\', 'plugin-paper\build\', 'plugin-paper\.gradle\')
+    # Gradle 用户目录（Forge/MC 依赖缓存，动辄 1GB+），完全可重新生成
+    $exclude += @('.gradle-home\')
     # 工作区自带的 JDK 17（约 300MB），没必要进快照
     $exclude += @('tools\jdk-17.0.20.1+1\')
 }
@@ -92,7 +95,7 @@ if (-not $IncludeBuild) {
 $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 $safeTag = ($Tag -replace '[\\/:*?"<>|\s]+', '-').Trim('-')
 if (-not $safeTag) { $safeTag = 'manual' }
-$zipPath = Join-Path $Destination ("MMmap_{0}_{1}.zip" -f $stamp, $safeTag)
+$zipPath = Join-Path $Destination ("StarTrail_{0}_{1}.zip" -f $stamp, $safeTag)
 
 $files = Get-ChildItem -Path $Root -Recurse -File -Force | Where-Object {
     $rel = $_.FullName.Substring($Root.Length + 1)
@@ -106,7 +109,7 @@ $files = Get-ChildItem -Path $Root -Recurse -File -Force | Where-Object {
 if (-not $files) { throw "工作区里没有找到要备份的文件: $Root" }
 
 $info = @(
-    "MMmap 工作区快照"
+    "星轨 StarTrail 工作区快照"
     "时间: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
     "来源: $Root"
     "标签: $Tag"
