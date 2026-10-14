@@ -6,9 +6,9 @@
 
 | 部件 | 版本号写在哪（唯一事实来源） | 当前值 |
 |---|---|---|
-| Forge 客户端模组 | `mod-forge/gradle.properties` → `mod_version` | `1.9.5` |
+| Forge 客户端模组 | `mod-forge/gradle.properties` → `mod_version` | `1.0.0` |
 | Fabric 客户端模组（上游原版） | 上游 jar 自带，我们不写 | `1.9.5` |
-| 服务端 Paper 插件 | `dist/server-plugin/StarTrail-Plugin-1.9.4.jar` 内的 `plugin.yml` | `1.9.4` |
+| 服务端 Paper 插件 | `plugin-paper/src/main/resources/plugin.yml` → `version:` | `1.0.0` |
 
 > 改模组版本**只改 `gradle.properties` 一处**：`build-mod.ps1` 会读出它决定产物名，
 > `build.gradle` 也会把它展开进 `mods.toml`。别去手改 `mods.toml`。
@@ -19,9 +19,9 @@
 
 | 平台 | 文件名格式 | 例 |
 |---|---|---|
-| Forge | `startrail-forge-<版本>.jar` | `startrail-forge-1.9.7.jar` |
+| Forge | `startrail-forge-<版本>.jar` | `startrail-forge-1.0.0.jar` |
 | Fabric | `mmap-fabric-<版本>.jar` | `mmap-fabric-1.9.5.jar` |
-| 服务端插件 | `StarTrail-Plugin-<版本>.jar` | `StarTrail-Plugin-1.9.4.jar` |
+| 服务端插件 | `StarTrail-Plugin-<版本>.jar` | `StarTrail-Plugin-1.0.0.jar` |
 
 Gradle 构建出来的原始文件名叫 `startrail-<版本>.jar`（`archivesName = startrail`），发布时由
 `tools\build-mod.ps1` 自动改名成 `startrail-forge-<版本>.jar` 放进 `dist\client-mod\`。
