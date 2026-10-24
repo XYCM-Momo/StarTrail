@@ -23,7 +23,7 @@ PCL 这三个实例都开了**版本隔离**，也就是「游戏目录」= `ver
 
 | 放什么 | 放到哪 |
 |---|---|
-| 模组 jar | `...\.minecraft\versions\时之旅者\mods\startrail-forge-<版本>.jar`（当前 1.0.0） |
+| 模组 jar | `...\.minecraft\versions\时之旅者\mods\startrail-forge-<版本>.jar`（当前 1.0.1） |
 | 地图图片 | `...\versions\时之旅者\startrail\map\`（文件名要和插件里配的 `fileName` 对上） |
 | 传送点图标 | `...\versions\时之旅者\startrail\legend\` |
 | MythicMobs 头颅 | `...\versions\时之旅者\startrail\mm\` |

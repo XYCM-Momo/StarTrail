@@ -271,6 +271,9 @@ public class WorldMapScreen extends Screen {
       if (this.selectedWarpId != null) {
          panelRect = this.getSelectedPanelRect();
       }
+      // 设置面板打开时同样要避开：名字是 drawString 画的，晚于面板底色的 fill 才栅格化，
+      // 不主动跳过的话会「浮」在面板上方（与右键选项栏同一个成因）。
+      int[] settingsRect = this.getSettingsHideRect();
 
       for (MapRegion region : regions) {
          double centerX = (double)(region.getMinX() + region.getMaxX()) / 2.0;
@@ -302,6 +305,9 @@ public class WorldMapScreen extends Screen {
                && textY + 9 > menuRect[1]) {
                continue;
             }
+            if (this.intersectsRect(settingsRect, textX - 3, textY - 2, textX + textWidth + 3, textY + 20)) {
+               continue;
+            }
             context.fill(textX - 3, textY - 2, textX + textWidth + 3, textY + 9, -1728053248);
             context.drawString(tr, label, textX, textY, 16777215);
             String typeText = region.getType().getDisplayName();
@@ -318,7 +324,7 @@ public class WorldMapScreen extends Screen {
          String world = client.level.dimension().location().toString();
          ConfigManager.ClientConfig cfg = ConfigManager.getInstance().getConfig();
          if (cfg.worldmap.showPolygons) {
-            int[] panelRect = this.selectedWarpId != null ? this.getSelectedPanelRect() : null;
+            int[] panelRect = this.getOverlayHideRect();
             if (panelRect != null) {
                PolygonOverlay.render(
                   world,
@@ -357,8 +363,10 @@ public class WorldMapScreen extends Screen {
             String world = client.level.dimension().location().toString();
             int baseIconSize = 6;
             int[] menuRect = this.contextMenuOpen ? this.getContextMenuRect() : null;
-            if (this.selectedWarpId != null) {
-               int[] panelRect = this.getSelectedPanelRect();
+            // 设置面板 / 传送点面板 / 右键菜单：名字落进去就不画（见 getOverlayHideRect 注释）
+            int[] hideRect = this.mergeRect(this.getSelectedHideRect(), menuRect);
+            int[] panelRect = this.getSelectedPanelRectOrNull();
+            if (panelRect != null) {
                WarpOverlay.renderWorldMap(
                   world,
                   this.warpPointStore,
@@ -376,7 +384,7 @@ public class WorldMapScreen extends Screen {
                   panelRect[1],
                   panelRect[2],
                   panelRect[3],
-                  menuRect
+                  hideRect
                );
             } else {
                WarpOverlay.renderWorldMap(
@@ -392,7 +400,7 @@ public class WorldMapScreen extends Screen {
                   client.font,
                   baseIconSize,
                   this.selectedWarpId,
-                  menuRect
+                  hideRect
                );
             }
 
@@ -692,6 +700,58 @@ public class WorldMapScreen extends Screen {
       return new int[]{x0, y0, x0 + w, y0 + h};
    }
 
+   /** 传送点详情面板矩形；没选中时返回 null（供渲染分支做 x0<0 判定）。 */
+   private int[] getSelectedPanelRectOrNull() {
+      return this.selectedWarpId != null ? this.getSelectedPanelRect() : null;
+   }
+
+   /**
+    * 地图上「名字」需要避让的所有遮挡区，取这些矩形的并集包围盒。
+    *
+    * 为什么需要：区域名 / 传送点名都是 drawString 画的，在 1.20.1 的 GUI 里文字 glyph
+    * 与 fill 分属不同批次、文字批次更晚提交，所以后画的面板底色盖不住文字，名字会浮在面板上方。
+    * 右键选项栏早在 1.20.1 就踩过这个坑（见 renderContextMenu 的抬层注释），
+    * 这里补上设置面板与传送点面板：名字落进这些矩形就不画。
+    *
+    * 返回 null 表示当前没有任何面板遮挡。
+    */
+   private int[] getOverlayHideRect() {
+      int[] rect = this.getSelectedHideRect();
+      if (this.contextMenuOpen) {
+         rect = this.mergeRect(rect, this.getContextMenuRect());
+      }
+
+      return rect;
+   }
+
+   /** 传送点详情面板 / 设置面板的遮挡矩形（两者不会同时打开）。 */
+   private int[] getSelectedHideRect() {
+      if (this.selectedWarpId != null) {
+         return this.getSelectedPanelRect();
+      } else {
+         return this.getSettingsHideRect();
+      }
+   }
+
+   /** 设置面板的遮挡矩形；面板没打开时返回 null。 */
+   private int[] getSettingsHideRect() {
+      return this.settingsOpen ? this.getSettingsPanelRect() : null;
+   }
+
+   private int[] mergeRect(int[] a, int[] b) {
+      if (a == null) {
+         return b;
+      } else if (b == null) {
+         return a;
+      } else {
+         return new int[]{Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])};
+      }
+   }
+
+   private boolean intersectsRect(int[] rect, int x0, int y0, int x1, int y1) {
+      return rect != null && x0 < rect[2] && x1 > rect[0] && y0 < rect[3] && y1 > rect[1];
+   }
+
    private int[][] getSelectedPanelButtonRects() {
       int[] p = this.getSelectedPanelRect();
       int x0 = p[0] + 8;
@@ -859,6 +919,11 @@ public class WorldMapScreen extends Screen {
    }
 
    private void renderSettingsOverlay(GuiGraphics context, int mouseX, int mouseY) {
+      // 抬到 tooltip 同层 z=400：地图上的名字是文字批次，晚于 fill 栅格化，
+      // 不抬层时半透明底盖不住它们，名字会浮在设置面板上方。
+      PoseStack pose = context.pose();
+      pose.pushPose();
+      pose.translate(0.0F, 0.0F, 400.0F);
       context.fill(0, 0, this.width, this.height, -1442840576);
       int[] p = this.getSettingsPanelRect();
       context.fill(p[0], p[1], p[2], p[3], -871689696);
@@ -885,6 +950,7 @@ public class WorldMapScreen extends Screen {
       int[] back = this.getSettingsBackRect();
       boolean backHover = this.inRect(mouseX, mouseY, back);
       this.drawSettingsButton(context, back, "\u8fd4\u56de", false, backHover);
+      pose.popPose();
    }
 
    private void renderWorldMapSettings(GuiGraphics context, int mouseX, int mouseY, ConfigManager.ClientConfig cfg) {
