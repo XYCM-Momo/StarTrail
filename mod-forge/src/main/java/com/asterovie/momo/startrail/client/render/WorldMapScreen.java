@@ -66,8 +66,10 @@ public class WorldMapScreen extends Screen {
    private int contextMenuTargetX;
    private int contextMenuTargetZ;
    // 设置界面（左下角齿轮打开，默认「大地图设置」页）
+   private static final int SETTINGS_TAB_WORLDMAP = 0;
+   private static final int SETTINGS_TAB_MINIMAP = 1;
    private boolean settingsOpen = false;
-   private int settingsTab = 0;
+   private int settingsTab = SETTINGS_TAB_WORLDMAP;
 
    public WorldMapScreen(
       RegionDataStore regionDataStore,
@@ -125,21 +127,28 @@ public class WorldMapScreen extends Screen {
          }
       }
 
-      this.renderMapImages(context);
-      this.renderRegionOverlays(context);
-      this.renderRegionLabels(context);
-      this.renderPolygonOverlays(context);
-      this.renderWarps(context);
-      ConfigManager.ClientConfig rcfg = ConfigManager.getInstance().getConfig();
-      if (rcfg != null && rcfg.worldmap != null && rcfg.worldmap.showPlayers) {
-         this.renderPlayerMarker(context);
+      boolean mapVisible = !this.isMapHiddenBySettings();
+      if (mapVisible) {
+         this.renderMapImages(context);
+         this.renderRegionOverlays(context);
+         this.renderRegionLabels(context);
+         this.renderPolygonOverlays(context);
+         this.renderWarps(context);
+         ConfigManager.ClientConfig rcfg = ConfigManager.getInstance().getConfig();
+         if (rcfg != null && rcfg.worldmap != null && rcfg.worldmap.showPlayers) {
+            this.renderPlayerMarker(context);
+         }
+
+         this.renderNavPath(context);
+         this.renderUIOverlay(context, mouseX, mouseY);
       }
 
-      this.renderNavPath(context);
-      this.renderUIOverlay(context, mouseX, mouseY);
       super.render(context, mouseX, mouseY, delta);
-      this.renderSelectedWarpPanel(context, mouseX, mouseY);
-      this.renderContextMenu(context, mouseX, mouseY);
+      if (mapVisible) {
+         this.renderSelectedWarpPanel(context, mouseX, mouseY);
+         this.renderContextMenu(context, mouseX, mouseY);
+      }
+
       if (this.settingsOpen) {
          this.renderSettingsOverlay(context, mouseX, mouseY);
       } else {
@@ -733,9 +742,9 @@ public class WorldMapScreen extends Screen {
       }
    }
 
-   /** 设置面板的遮挡矩形；面板没打开时返回 null。 */
+   /** 遮罩矩形；小地图设置页把大地图整个藏起来后，没有需要避让的东西。 */
    private int[] getSettingsHideRect() {
-      return this.settingsOpen ? this.getSettingsPanelRect() : null;
+      return this.settingsOpen && !this.isMapHiddenBySettings() ? this.getSettingsPanelRect() : null;
    }
 
    private int[] mergeRect(int[] a, int[] b) {
@@ -794,10 +803,15 @@ public class WorldMapScreen extends Screen {
       return mx >= r[0] && mx <= r[2] && my >= r[1] && my <= r[3];
    }
 
+   /** 设置界面里「小地图设置」页（tab=1）会盖住整张大地图，只留设置面板。 */
+   private boolean isMapHiddenBySettings() {
+      return this.settingsOpen && this.settingsTab == SETTINGS_TAB_MINIMAP;
+   }
+
    private void openSettings() {
       this.playClickSound();
       this.settingsOpen = true;
-      this.settingsTab = 0;
+      this.settingsTab = SETTINGS_TAB_WORLDMAP;
       this.contextMenuOpen = false;
       this.selectedWarpId = null;
    }
@@ -941,7 +955,7 @@ public class WorldMapScreen extends Screen {
       }
 
       ConfigManager.ClientConfig cfg = ConfigManager.getInstance().getConfig();
-      if (this.settingsTab == 0) {
+      if (this.settingsTab == SETTINGS_TAB_WORLDMAP) {
          this.renderWorldMapSettings(context, mouseX, mouseY, cfg);
       } else {
          this.renderMinimapSettings(context, mouseX, mouseY, cfg);
@@ -989,6 +1003,12 @@ public class WorldMapScreen extends Screen {
       int[] s1 = this.getSettingsShapeRect(1);
       this.drawSettingsButton(context, s0, "\u5706\u5f62", cfg.minimap.shape == 0, this.inRect(mouseX, mouseY, s0));
       this.drawSettingsButton(context, s1, "\u6b63\u65b9\u5f62", cfg.minimap.shape == 1, this.inRect(mouseX, mouseY, s1));
+      // 本页会盖住整张大地图，明确告诉使用者怎么把它叫回来。
+      // 窗口很矮时面板会被压缩，这一行放不下就干脆不画，免得压到「返回」按钮上。
+      int hintY = this.settingsRowY(6) + 4;
+      if (hintY + 9 <= p[3] - 12) {
+         this.drawSettingsLabel(context, "\u672c\u9875\u5df2\u9690\u85cf\u5927\u5730\u56fe\uff0c\u5207\u56de\u300c\u5927\u5730\u56fe\u8bbe\u7f6e\u300d\u5373\u53ef\u6062\u590d", p[0] + 14, hintY);
+      }
    }
 
    private void handleSettingsClick(double mouseX, double mouseY) {
@@ -1006,6 +1026,12 @@ public class WorldMapScreen extends Screen {
          if (this.inRect(mx, my, t)) {
             this.playClickSound();
             this.settingsTab = i;
+            if (this.isMapHiddenBySettings()) {
+               // 大地图被藏起来时，选项栏/传送点面板没有渲染的意义
+               this.contextMenuOpen = false;
+               this.selectedWarpId = null;
+            }
+
             return;
          }
       }
@@ -1015,7 +1041,7 @@ public class WorldMapScreen extends Screen {
          return;
       }
 
-      if (this.settingsTab == 0) {
+      if (this.settingsTab == SETTINGS_TAB_WORLDMAP) {
          int[] t0 = this.getSettingsToggleRect(0);
          if (this.inRect(mx, my, t0)) {
             this.playClickSound();
@@ -1091,6 +1117,11 @@ public class WorldMapScreen extends Screen {
    // ==================== 右键选项栏 ====================
 
    private void openContextMenu(double mouseX, double mouseY) {
+      // 大地图被设置页藏起来时不允许再弹选项栏（否则会对着看不见的地图导航/传送）
+      if (this.isMapHiddenBySettings()) {
+         return;
+      }
+
       this.contextMenuOpen = true;
       this.contextMenuTargetX = (int)Math.floor(this.screenToWorldX(mouseX));
       this.contextMenuTargetZ = (int)Math.floor(this.screenToWorldY(mouseY));
@@ -1302,6 +1333,11 @@ public class WorldMapScreen extends Screen {
    }
 
    public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
+      // 大地图被设置页藏起来时，滚轮不该再缩放一张看不见的地图
+      if (this.isMapHiddenBySettings()) {
+         return true;
+      }
+
       double worldX = this.screenToWorldX(mouseX);
       double worldZ = this.screenToWorldY(mouseY);
       double zoomFactor = amount > 0.0 ? 1.2 : 0.8333333333333334;

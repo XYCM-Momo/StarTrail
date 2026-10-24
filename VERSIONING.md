@@ -6,7 +6,7 @@
 
 | 部件 | 版本号写在哪（唯一事实来源） | 当前值 |
 |---|---|---|
-| Forge 客户端模组 | `mod-forge/gradle.properties` → `mod_version` | `1.0.1` |
+| Forge 客户端模组 | `mod-forge/gradle.properties` → `mod_version` | `1.0.2` |
 | Fabric 客户端模组（上游原版） | 上游 jar 自带，我们不写 | `1.9.5` |
 | 服务端 Paper 插件 | `plugin-paper/src/main/resources/plugin.yml` → `version:` | `1.0.0` |
 
@@ -19,7 +19,7 @@
 
 | 平台 | 文件名格式 | 例 |
 |---|---|---|
-| Forge | `startrail-forge-<版本>.jar` | `startrail-forge-1.0.1.jar` |
+| Forge | `startrail-forge-<版本>.jar` | `startrail-forge-1.0.2.jar` |
 | Fabric | `mmap-fabric-<版本>.jar` | `mmap-fabric-1.9.5.jar` |
 | 服务端插件 | `StarTrail-Plugin-<版本>.jar` | `StarTrail-Plugin-1.0.0.jar` |
 
