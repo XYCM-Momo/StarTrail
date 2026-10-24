@@ -845,11 +845,44 @@ public class WorldMapScreen extends Screen {
    }
 
    private int[] getSettingsPanelRect() {
-      int w = Math.min(380, this.width - 40);
+      // 「小地图设置」页要腾出左边一块屏幕缩略图做实时预览，所以比「大地图设置」页宽。
+      int maxW = this.settingsTab == SETTINGS_TAB_MINIMAP ? 560 : 380;
+      int w = Math.min(maxW, this.width - 40);
       int h = Math.min(280, this.height - 40);
       int x0 = (this.width - w) / 2;
       int y0 = (this.height - h) / 2;
       return new int[]{x0, y0, x0 + w, y0 + h};
+   }
+
+   /**
+    * 「小地图设置」页左侧那块「屏幕缩略图」的矩形。
+    *
+    * <p>把整个游戏界面按比例缩小画成一个框，小地图再按它在屏幕上真实的方位/大小/形状画进去，
+    * 于是调「方位 / 大小 / 形状」时能直接看到效果，而不是对着一堆数字猜。
+    */
+   private int[] getMinimapPreviewRect() {
+      int[] p = this.getSettingsPanelRect();
+      int top = this.settingsRowY(0) - 6;
+      int availH = p[3] - 14 - top;
+      int availW = Math.min(232, (p[2] - p[0]) / 2 - 20);
+      if (availW < 80 || availH < 50) {
+         return null;
+      }
+
+      int guiW = Math.max(1, this.width);
+      int guiH = Math.max(1, this.height);
+      // 按游戏界面真实宽高比塞进可用区域
+      double scale = Math.min((double)availW / (double)guiW, (double)availH / (double)guiH);
+      int w = Math.max(40, (int)Math.round((double)guiW * scale));
+      int h = Math.max(30, (int)Math.round((double)guiH * scale));
+      return new int[]{p[0] + 14, top, p[0] + 14 + w, top + h};
+   }
+
+   /** 小地图设置页里，控件从缩略图右侧开始摆。 */
+   private int getMinimapControlsLeft() {
+      int[] preview = this.getMinimapPreviewRect();
+      int[] p = this.getSettingsPanelRect();
+      return preview != null ? preview[2] + 18 : p[0] + 14;
    }
 
    private int[] getSettingsTabRect(int index) {
@@ -884,11 +917,12 @@ public class WorldMapScreen extends Screen {
 
    private int[][] getSettingsPosRects() {
       int[] p = this.getSettingsPanelRect();
+      int left = this.getMinimapControlsLeft();
       int cellW = 84;
       int cellH = 18;
       int gap = 6;
       int totalW = cellW * 2 + gap;
-      int startX = p[0] + (p[2] - p[0] - totalW) / 2;
+      int startX = left;
       int y = this.settingsRowY(1);
       int[][] rects = new int[4][4];
       rects[0] = new int[]{startX, y, startX + cellW, y + cellH};
@@ -900,21 +934,22 @@ public class WorldMapScreen extends Screen {
 
    private int[] getSettingsSizeRect(boolean plus) {
       int[] p = this.getSettingsPanelRect();
+      int left = this.getMinimapControlsLeft();
       int w = 26;
       int h = 18;
       int y = this.settingsRowY(3);
-      int x0 = plus ? p[2] - 14 - w : p[0] + 14;
+      int x0 = plus ? left + 40 + 26 + 8 + 8 : left + 40;
       return new int[]{x0, y, x0 + w, y + h};
    }
 
    private int[] getSettingsShapeRect(int shape) {
-      int[] p = this.getSettingsPanelRect();
+      int left = this.getMinimapControlsLeft();
       int w = 76;
       int h = 18;
       int gap = 6;
       int y = this.settingsRowY(5);
       // 按钮整体放在「形状」标签右侧，避免重叠
-      int x0 = p[0] + 54 + shape * (w + gap);
+      int x0 = left + 54 + shape * (w + gap);
       return new int[]{x0, y, x0 + w, y + h};
    }
 
@@ -982,7 +1017,8 @@ public class WorldMapScreen extends Screen {
 
    private void renderMinimapSettings(GuiGraphics context, int mouseX, int mouseY, ConfigManager.ClientConfig cfg) {
       int[] p = this.getSettingsPanelRect();
-      int labelX = p[0] + 14;
+      int labelX = this.getMinimapControlsLeft();
+      this.renderMinimapPreview(context, cfg);
       this.drawSettingsLabel(context, "\u65b9\u4f4d", labelX, this.settingsRowY(0) + 4);
       int[] posVals = new int[]{1, 0, 2, 3};
       String[] posNames = new String[]{"\u5de6\u4e0a\u89d2", "\u53f3\u4e0a\u89d2", "\u5de6\u4e0b\u89d2", "\u53f3\u4e0b\u89d2"};
@@ -993,7 +1029,7 @@ public class WorldMapScreen extends Screen {
          this.drawSettingsButton(context, posRects[i], posNames[i], active, this.inRect(mouseX, mouseY, posRects[i]));
       }
 
-      this.drawSettingsLabel(context, "\u5927\u5c0f: " + cfg.minimap.size, labelX + 40, this.settingsRowY(3) + 4);
+      this.drawSettingsLabel(context, "\u5927\u5c0f: " + cfg.minimap.size, labelX, this.settingsRowY(3) + 4);
       int[] minus = this.getSettingsSizeRect(false);
       int[] plus = this.getSettingsSizeRect(true);
       this.drawSettingsButton(context, minus, "-", false, this.inRect(mouseX, mouseY, minus));
@@ -1003,12 +1039,58 @@ public class WorldMapScreen extends Screen {
       int[] s1 = this.getSettingsShapeRect(1);
       this.drawSettingsButton(context, s0, "\u5706\u5f62", cfg.minimap.shape == 0, this.inRect(mouseX, mouseY, s0));
       this.drawSettingsButton(context, s1, "\u6b63\u65b9\u5f62", cfg.minimap.shape == 1, this.inRect(mouseX, mouseY, s1));
-      // 本页会盖住整张大地图，明确告诉使用者怎么把它叫回来。
-      // 窗口很矮时面板会被压缩，这一行放不下就干脆不画，免得压到「返回」按钮上。
-      int hintY = this.settingsRowY(6) + 4;
-      if (hintY + 9 <= p[3] - 12) {
-         this.drawSettingsLabel(context, "\u672c\u9875\u5df2\u9690\u85cf\u5927\u5730\u56fe\uff0c\u5207\u56de\u300c\u5927\u5730\u56fe\u8bbe\u7f6e\u300d\u5373\u53ef\u6062\u590d", p[0] + 14, hintY);
+   }
+
+   /**
+    * 「小地图设置」页左侧的实时预览：把游戏界面按比例缩成一个框，
+    * 再按当前配置（方位 / 大小 / 形状）把小地图画进去，改一下立刻看到效果。
+    */
+   private void renderMinimapPreview(GuiGraphics context, ConfigManager.ClientConfig cfg) {
+      int[] preview = this.getMinimapPreviewRect();
+      if (preview == null) {
+         return;
       }
+
+      int px0 = preview[0];
+      int py0 = preview[1];
+      int px1 = preview[2];
+      int py1 = preview[3];
+      // 缩略图底色 + 边框，代表「游戏画面」
+      context.fill(px0, py0, px1, py1, -1442840576);
+      this.drawPanelBorder(context, px0, py0, px1, py1, -13735025, 1);
+
+      double sx = (double)(px1 - px0) / (double)Math.max(1, this.width);
+      double sy = (double)(py1 - py0) / (double)Math.max(1, this.height);
+      int size = (int)Math.round((double)cfg.minimap.size * Math.min(sx, sy));
+      size = Math.max(12, Math.min(size, Math.min(px1 - px0, py1 - py0)));
+      int margin = (int)Math.round(5.0 * Math.min(sx, sy));
+      int mapX;
+      int mapY;
+      switch (cfg.minimap.position) {
+         case 1:
+            mapX = px0 + margin;
+            mapY = py0 + margin;
+            break;
+         case 2:
+            mapX = px0 + margin;
+            mapY = py1 - size - margin;
+            break;
+         case 3:
+            mapX = px1 - size - margin;
+            mapY = py1 - size - margin;
+            break;
+         default:
+            mapX = px1 - size - margin;
+            mapY = py0 + margin;
+      }
+
+      StarTrailClient instance = StarTrailClient.getInstance();
+      MinimapManager minimap = instance != null ? instance.getMinimapManager() : null;
+      if (minimap != null) {
+         minimap.renderPreview(context, Minecraft.getInstance(), 0.0F, mapX, mapY, size);
+      }
+
+      this.drawSettingsLabel(context, "\u5b9e\u65f6\u9884\u89c8", px0 + 4, py0 + 3);
    }
 
    private void handleSettingsClick(double mouseX, double mouseY) {

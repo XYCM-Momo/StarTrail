@@ -110,26 +110,92 @@ public class MinimapRenderer {
          int centerX = mapX + this.mapSize / 2;
          int centerY = mapY + this.mapSize / 2;
          int radius = this.mapSize / 2;
-         int shape = config.minimap.shape;
-         boolean square = shape == 1;
-         PoseStack matrices = drawContext.pose();
-         matrices.pushPose();
-         if (square) {
-            drawContext.fill(mapX - 2, mapY - 2, mapX + this.mapSize + 2, mapY + this.mapSize + 2, -871559910);
-         } else {
-            this.drawFilledCircle(matrices, (float)centerX, (float)centerY, (float)(radius + 2), -871559910);
-         }
+         this.drawMinimap(
+            drawContext, client, config, worldKey, tickDelta, playerX, playerZ, mapX, mapY, this.mapSize, this.zoom, centerX, centerY, radius
+         );
+      }
+   }
 
-         this.imageRenderer.render(drawContext, client, mapX, mapY, this.mapSize, this.zoom, tickDelta, playerX, playerZ, shape);
-         if (config.minimap.showRegions) {
-            this.renderRegionBorders(matrices, client, centerX, centerY, radius, playerX, playerZ);
-         }
+   /**
+    * 在指定矩形里按当前配置画出小地图本体。
+    *
+    * <p>大地图「小地图设置」页用它做实时预览：位置/大小/形状改了能立刻看到效果，
+    * 而不是只看到一块空背景。参数与 HUD 上的那次调用完全共用同一份绘制代码，
+    * 所以预览就是真实效果，不会出现「预览一套、实际另一套」。
+    */
+   public void renderPreview(GuiGraphics drawContext, Minecraft client, float tickDelta, int mapX, int mapY, int size) {
+      if (client.player != null && client.level != null && size > 0) {
+         ConfigManager.ClientConfig config = this.getConfig();
+         String worldKey = client.level.dimension().location().toString();
+         double playerX = client.player.xo + (client.player.getX() - client.player.xo) * (double)tickDelta;
+         double playerZ = client.player.zo + (client.player.getZ() - client.player.zo) * (double)tickDelta;
+         // renderNavPath 读的是字段而不是参数，预览时把字段临时对齐到预览尺寸，画完还原，
+         // 免得影响 HUD 那边的正常渲染。
+         int prevSize = this.mapSize;
+         double prevZoom = this.zoom;
+         this.mapSize = size;
+         this.zoom = config.minimap.zoom;
 
-         if (config.minimap.showPolygons && client.player != null && client.level != null) {
-            PolygonOverlay.render(
-               worldKey, this.polygonRegionStore, playerX, playerZ, centerX, centerY, this.zoom, drawContext, client.font, 1.0F, true, centerX, centerY, radius
+         try {
+            this.drawMinimap(
+               drawContext,
+               client,
+               config,
+               worldKey,
+               tickDelta,
+               playerX,
+               playerZ,
+               mapX,
+               mapY,
+               size,
+               config.minimap.zoom,
+               mapX + size / 2,
+               mapY + size / 2,
+               size / 2
             );
+         } finally {
+            this.mapSize = prevSize;
+            this.zoom = prevZoom;
          }
+      }
+   }
+
+   private void drawMinimap(
+      GuiGraphics drawContext,
+      Minecraft client,
+      ConfigManager.ClientConfig config,
+      String worldKey,
+      float tickDelta,
+      double playerX,
+      double playerZ,
+      int mapX,
+      int mapY,
+      int size,
+      double zoom,
+      int centerX,
+      int centerY,
+      int radius
+   ) {
+      int shape = config.minimap.shape;
+      boolean square = shape == 1;
+      PoseStack matrices = drawContext.pose();
+      matrices.pushPose();
+      if (square) {
+         drawContext.fill(mapX - 2, mapY - 2, mapX + size + 2, mapY + size + 2, -871559910);
+      } else {
+         this.drawFilledCircle(matrices, (float)centerX, (float)centerY, (float)(radius + 2), -871559910);
+      }
+
+      this.imageRenderer.render(drawContext, client, mapX, mapY, size, zoom, tickDelta, playerX, playerZ, shape);
+      if (config.minimap.showRegions) {
+         this.renderRegionBorders(matrices, client, centerX, centerY, radius, playerX, playerZ, zoom);
+      }
+
+      if (config.minimap.showPolygons && client.player != null && client.level != null) {
+         PolygonOverlay.render(
+            worldKey, this.polygonRegionStore, playerX, playerZ, centerX, centerY, zoom, drawContext, client.font, 1.0F, true, centerX, centerY, radius
+         );
+      }
 
          if (config.minimap.showWarps && client.player != null && client.level != null) {
             int baseIconSize = 8;
@@ -141,7 +207,7 @@ public class MinimapRenderer {
                playerZ,
                centerX,
                centerY,
-               this.zoom,
+               zoom,
                drawContext,
                client.font,
                centerX,
@@ -164,18 +230,18 @@ public class MinimapRenderer {
                   playerZ,
                   centerX,
                   centerY,
-                  this.zoom,
+                  zoom,
                   drawContext,
                   true,
                   centerX,
                   centerY,
                   radius,
-                  Math.max(6, this.mapSize / 12)
+                  Math.max(6, size / 12)
                );
             }
          }
 
-         int faceSize = Math.max(6, this.mapSize / 12);
+         int faceSize = Math.max(6, size / 12);
          if (client.player != null) {
             float yaw = client.player.getViewYRot(tickDelta);
             double fov = 70.0;
@@ -189,14 +255,14 @@ public class MinimapRenderer {
             this.renderPlayerFace(drawContext, client, centerX, centerY, faceSize);
          }
 
-         this.renderOtherPlayerFaces(drawContext, client, centerX, centerY, radius, this.zoom, faceSize);
+         this.renderOtherPlayerFaces(drawContext, client, centerX, centerY, radius, zoom, faceSize);
          this.renderNavPath(drawContext, centerX, centerY, playerX, playerZ);
          if (square) {
             int bc = -16721665;
-            drawContext.fill(mapX - 1, mapY - 1, mapX + this.mapSize + 1, mapY, bc);
-            drawContext.fill(mapX - 1, mapY + this.mapSize, mapX + this.mapSize + 1, mapY + this.mapSize + 1, bc);
-            drawContext.fill(mapX - 1, mapY - 1, mapX, mapY + this.mapSize + 1, bc);
-            drawContext.fill(mapX + this.mapSize, mapY - 1, mapX + this.mapSize + 1, mapY + this.mapSize + 1, bc);
+            drawContext.fill(mapX - 1, mapY - 1, mapX + size + 1, mapY, bc);
+            drawContext.fill(mapX - 1, mapY + size, mapX + size + 1, mapY + size + 1, bc);
+            drawContext.fill(mapX - 1, mapY - 1, mapX, mapY + size + 1, bc);
+            drawContext.fill(mapX + size, mapY - 1, mapX + size + 1, mapY + size + 1, bc);
          } else {
             this.drawCircleOutline(matrices, (float)centerX, (float)centerY, (float)radius, 1.0F, -1);
          }
@@ -206,7 +272,7 @@ public class MinimapRenderer {
             Font tr = client.font;
             int textWidth = tr.width(coords);
             int textX = centerX - textWidth / 2;
-            int textY = mapY + this.mapSize + 4;
+            int textY = mapY + size + 4;
             drawContext.fill(textX - 3, textY - 2, textX + textWidth + 3, textY + 9, Integer.MIN_VALUE);
             drawContext.drawString(tr, coords, textX, textY, 16776960);
          }
@@ -217,21 +283,20 @@ public class MinimapRenderer {
 
          RenderSystem.disableBlend();
          RenderSystem.setShader(GameRenderer::getPositionColorShader);
-      }
    }
 
-   private void renderRegionBorders(PoseStack matrices, Minecraft client, int centerX, int centerY, int radius, double playerX, double playerZ) {
+   private void renderRegionBorders(PoseStack matrices, Minecraft client, int centerX, int centerY, int radius, double playerX, double playerZ, double zoom) {
       if (client.player != null && client.level != null) {
-         int viewRange = (int)((double)radius / this.zoom);
+         int viewRange = (int)((double)radius / zoom);
 
          for (MapRegion region : this.regionDataStore.getAllRegions()) {
             if (region.intersects(
                (int)(playerX - (double)viewRange), (int)(playerZ - (double)viewRange), (int)(playerX + (double)viewRange), (int)(playerZ + (double)viewRange)
             )) {
-               float x1 = (float)centerX + (float)(((double)region.getMinX() - playerX) * this.zoom);
-               float z1 = (float)centerY + (float)(((double)region.getMinZ() - playerZ) * this.zoom);
-               float x2 = (float)centerX + (float)(((double)(region.getMaxX() + 1) - playerX) * this.zoom);
-               float z2 = (float)centerY + (float)(((double)(region.getMaxZ() + 1) - playerZ) * this.zoom);
+               float x1 = (float)centerX + (float)(((double)region.getMinX() - playerX) * zoom);
+               float z1 = (float)centerY + (float)(((double)region.getMinZ() - playerZ) * zoom);
+               float x2 = (float)centerX + (float)(((double)(region.getMaxX() + 1) - playerX) * zoom);
+               float z2 = (float)centerY + (float)(((double)(region.getMaxZ() + 1) - playerZ) * zoom);
                int fillColor = region.getFillColor();
                if ((fillColor >> 24 & 0xFF) > 0) {
                   this.drawFilledRect(matrices, x1, z1, x2, z2, fillColor);

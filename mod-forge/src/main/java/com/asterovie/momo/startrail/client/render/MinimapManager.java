@@ -7,6 +7,7 @@ import com.asterovie.momo.startrail.client.region.RegionDataStore;
 import com.asterovie.momo.startrail.client.warp.WarpIconManager;
 import com.asterovie.momo.startrail.client.warp.WarpPointStore;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraftforge.client.event.RenderGuiEvent;
 import net.minecraftforge.common.MinecraftForge;
@@ -76,6 +77,16 @@ public class MinimapManager {
 
    public void toggleMinimap() {
       this.enabled = !this.enabled;
+   }
+
+   /**
+    * 在指定矩形里按当前配置画一份小地图，供大地图的「小地图设置」页做实时预览。
+    *
+    * <p>预览与 HUD 上那次渲染共用 {@link MinimapRenderer} 的同一份绘制代码，
+    * 所以位置/大小/形状/缩放改完立刻能看到真实效果。
+    */
+   public void renderPreview(GuiGraphics drawContext, Minecraft client, float tickDelta, int mapX, int mapY, int size) {
+      this.renderer.renderPreview(drawContext, client, tickDelta, mapX, mapY, size);
    }
 
    public PolygonRegionStore getPolygonRegionStore() {
