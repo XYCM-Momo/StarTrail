@@ -117,7 +117,13 @@ public class WorldMapScreen extends Screen {
    }
 
    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
-      context.fill(0, 0, this.width, this.height, -15921894);
+      // 「小地图设置」页要把整个大地图界面收起来，背景直接透出游戏世界，
+      // 这样 HUD 上的小地图能按当前设置真实地显示在它该在的位置上，边调边看效果。
+      boolean mapVisible = !this.isMapHiddenBySettings();
+      if (mapVisible) {
+         context.fill(0, 0, this.width, this.height, -15921894);
+      }
+
       this.scale = this.scale + (this.targetScale - this.scale) * 0.15;
       if (this.followPlayer) {
          Minecraft client = Minecraft.getInstance();
@@ -127,7 +133,6 @@ public class WorldMapScreen extends Screen {
          }
       }
 
-      boolean mapVisible = !this.isMapHiddenBySettings();
       if (mapVisible) {
          this.renderMapImages(context);
          this.renderRegionOverlays(context);
@@ -154,6 +159,21 @@ public class WorldMapScreen extends Screen {
       } else {
          this.renderGearButton(context, mouseX, mouseY);
       }
+   }
+
+   /** 设置界面里「小地图设置」页会把整张大地图收起来，只留设置面板。 */
+   private boolean isMapHiddenBySettings() {
+      return this.settingsOpen && this.settingsTab == SETTINGS_TAB_MINIMAP;
+   }
+
+   /**
+    * 是否让 HUD 的小地图在本界面里照常显示。
+    *
+    * <p>只有「小地图设置」页为真：那一页大地图是收起来的，小地图按当前设置真实地画在
+    * 它该在的位置上，调方位/大小/形状时能直接看到效果。
+    */
+   public boolean showsMinimapInSettings() {
+      return this.isMapHiddenBySettings();
    }
 
    private void renderMapImages(GuiGraphics context) {
@@ -742,9 +762,9 @@ public class WorldMapScreen extends Screen {
       }
    }
 
-   /** 遮罩矩形；小地图设置页把大地图整个藏起来后，没有需要避让的东西。 */
+   /** 设置面板的遮挡矩形；面板没打开时返回 null。 */
    private int[] getSettingsHideRect() {
-      return this.settingsOpen && !this.isMapHiddenBySettings() ? this.getSettingsPanelRect() : null;
+      return this.settingsOpen ? this.getSettingsPanelRect() : null;
    }
 
    private int[] mergeRect(int[] a, int[] b) {
@@ -803,11 +823,6 @@ public class WorldMapScreen extends Screen {
       return mx >= r[0] && mx <= r[2] && my >= r[1] && my <= r[3];
    }
 
-   /** 设置界面里「小地图设置」页（tab=1）会盖住整张大地图，只留设置面板。 */
-   private boolean isMapHiddenBySettings() {
-      return this.settingsOpen && this.settingsTab == SETTINGS_TAB_MINIMAP;
-   }
-
    private void openSettings() {
       this.playClickSound();
       this.settingsOpen = true;
@@ -845,44 +860,11 @@ public class WorldMapScreen extends Screen {
    }
 
    private int[] getSettingsPanelRect() {
-      // 「小地图设置」页要腾出左边一块屏幕缩略图做实时预览，所以比「大地图设置」页宽。
-      int maxW = this.settingsTab == SETTINGS_TAB_MINIMAP ? 560 : 380;
-      int w = Math.min(maxW, this.width - 40);
+      int w = Math.min(380, this.width - 40);
       int h = Math.min(280, this.height - 40);
       int x0 = (this.width - w) / 2;
       int y0 = (this.height - h) / 2;
       return new int[]{x0, y0, x0 + w, y0 + h};
-   }
-
-   /**
-    * 「小地图设置」页左侧那块「屏幕缩略图」的矩形。
-    *
-    * <p>把整个游戏界面按比例缩小画成一个框，小地图再按它在屏幕上真实的方位/大小/形状画进去，
-    * 于是调「方位 / 大小 / 形状」时能直接看到效果，而不是对着一堆数字猜。
-    */
-   private int[] getMinimapPreviewRect() {
-      int[] p = this.getSettingsPanelRect();
-      int top = this.settingsRowY(0) - 6;
-      int availH = p[3] - 14 - top;
-      int availW = Math.min(232, (p[2] - p[0]) / 2 - 20);
-      if (availW < 80 || availH < 50) {
-         return null;
-      }
-
-      int guiW = Math.max(1, this.width);
-      int guiH = Math.max(1, this.height);
-      // 按游戏界面真实宽高比塞进可用区域
-      double scale = Math.min((double)availW / (double)guiW, (double)availH / (double)guiH);
-      int w = Math.max(40, (int)Math.round((double)guiW * scale));
-      int h = Math.max(30, (int)Math.round((double)guiH * scale));
-      return new int[]{p[0] + 14, top, p[0] + 14 + w, top + h};
-   }
-
-   /** 小地图设置页里，控件从缩略图右侧开始摆。 */
-   private int getMinimapControlsLeft() {
-      int[] preview = this.getMinimapPreviewRect();
-      int[] p = this.getSettingsPanelRect();
-      return preview != null ? preview[2] + 18 : p[0] + 14;
    }
 
    private int[] getSettingsTabRect(int index) {
@@ -917,12 +899,11 @@ public class WorldMapScreen extends Screen {
 
    private int[][] getSettingsPosRects() {
       int[] p = this.getSettingsPanelRect();
-      int left = this.getMinimapControlsLeft();
       int cellW = 84;
       int cellH = 18;
       int gap = 6;
       int totalW = cellW * 2 + gap;
-      int startX = left;
+      int startX = p[0] + (p[2] - p[0] - totalW) / 2;
       int y = this.settingsRowY(1);
       int[][] rects = new int[4][4];
       rects[0] = new int[]{startX, y, startX + cellW, y + cellH};
@@ -934,22 +915,21 @@ public class WorldMapScreen extends Screen {
 
    private int[] getSettingsSizeRect(boolean plus) {
       int[] p = this.getSettingsPanelRect();
-      int left = this.getMinimapControlsLeft();
       int w = 26;
       int h = 18;
       int y = this.settingsRowY(3);
-      int x0 = plus ? left + 40 + 26 + 8 + 8 : left + 40;
+      int x0 = plus ? p[2] - 14 - w : p[0] + 14;
       return new int[]{x0, y, x0 + w, y + h};
    }
 
    private int[] getSettingsShapeRect(int shape) {
-      int left = this.getMinimapControlsLeft();
+      int[] p = this.getSettingsPanelRect();
       int w = 76;
       int h = 18;
       int gap = 6;
       int y = this.settingsRowY(5);
       // 按钮整体放在「形状」标签右侧，避免重叠
-      int x0 = left + 54 + shape * (w + gap);
+      int x0 = p[0] + 54 + shape * (w + gap);
       return new int[]{x0, y, x0 + w, y + h};
    }
 
@@ -973,7 +953,11 @@ public class WorldMapScreen extends Screen {
       PoseStack pose = context.pose();
       pose.pushPose();
       pose.translate(0.0F, 0.0F, 400.0F);
-      context.fill(0, 0, this.width, this.height, -1442840576);
+      // 「小地图设置」页不压全屏遮罩：那一页要把游戏世界透出来，好让 HUD 小地图
+      // 按真实位置显示，边调边看效果。其余情况仍压一层，避免地图画面干扰看面板。
+      if (!this.isMapHiddenBySettings()) {
+         context.fill(0, 0, this.width, this.height, -1442840576);
+      }
       int[] p = this.getSettingsPanelRect();
       context.fill(p[0], p[1], p[2], p[3], -871689696);
       this.drawPanelBorder(context, p[0], p[1], p[2], p[3], -16721665, 1);
@@ -1017,8 +1001,7 @@ public class WorldMapScreen extends Screen {
 
    private void renderMinimapSettings(GuiGraphics context, int mouseX, int mouseY, ConfigManager.ClientConfig cfg) {
       int[] p = this.getSettingsPanelRect();
-      int labelX = this.getMinimapControlsLeft();
-      this.renderMinimapPreview(context, cfg);
+      int labelX = p[0] + 14;
       this.drawSettingsLabel(context, "\u65b9\u4f4d", labelX, this.settingsRowY(0) + 4);
       int[] posVals = new int[]{1, 0, 2, 3};
       String[] posNames = new String[]{"\u5de6\u4e0a\u89d2", "\u53f3\u4e0a\u89d2", "\u5de6\u4e0b\u89d2", "\u53f3\u4e0b\u89d2"};
@@ -1029,7 +1012,7 @@ public class WorldMapScreen extends Screen {
          this.drawSettingsButton(context, posRects[i], posNames[i], active, this.inRect(mouseX, mouseY, posRects[i]));
       }
 
-      this.drawSettingsLabel(context, "\u5927\u5c0f: " + cfg.minimap.size, labelX, this.settingsRowY(3) + 4);
+      this.drawSettingsLabel(context, "\u5927\u5c0f: " + cfg.minimap.size, labelX + 40, this.settingsRowY(3) + 4);
       int[] minus = this.getSettingsSizeRect(false);
       int[] plus = this.getSettingsSizeRect(true);
       this.drawSettingsButton(context, minus, "-", false, this.inRect(mouseX, mouseY, minus));
@@ -1039,58 +1022,6 @@ public class WorldMapScreen extends Screen {
       int[] s1 = this.getSettingsShapeRect(1);
       this.drawSettingsButton(context, s0, "\u5706\u5f62", cfg.minimap.shape == 0, this.inRect(mouseX, mouseY, s0));
       this.drawSettingsButton(context, s1, "\u6b63\u65b9\u5f62", cfg.minimap.shape == 1, this.inRect(mouseX, mouseY, s1));
-   }
-
-   /**
-    * 「小地图设置」页左侧的实时预览：把游戏界面按比例缩成一个框，
-    * 再按当前配置（方位 / 大小 / 形状）把小地图画进去，改一下立刻看到效果。
-    */
-   private void renderMinimapPreview(GuiGraphics context, ConfigManager.ClientConfig cfg) {
-      int[] preview = this.getMinimapPreviewRect();
-      if (preview == null) {
-         return;
-      }
-
-      int px0 = preview[0];
-      int py0 = preview[1];
-      int px1 = preview[2];
-      int py1 = preview[3];
-      // 缩略图底色 + 边框，代表「游戏画面」
-      context.fill(px0, py0, px1, py1, -1442840576);
-      this.drawPanelBorder(context, px0, py0, px1, py1, -13735025, 1);
-
-      double sx = (double)(px1 - px0) / (double)Math.max(1, this.width);
-      double sy = (double)(py1 - py0) / (double)Math.max(1, this.height);
-      int size = (int)Math.round((double)cfg.minimap.size * Math.min(sx, sy));
-      size = Math.max(12, Math.min(size, Math.min(px1 - px0, py1 - py0)));
-      int margin = (int)Math.round(5.0 * Math.min(sx, sy));
-      int mapX;
-      int mapY;
-      switch (cfg.minimap.position) {
-         case 1:
-            mapX = px0 + margin;
-            mapY = py0 + margin;
-            break;
-         case 2:
-            mapX = px0 + margin;
-            mapY = py1 - size - margin;
-            break;
-         case 3:
-            mapX = px1 - size - margin;
-            mapY = py1 - size - margin;
-            break;
-         default:
-            mapX = px1 - size - margin;
-            mapY = py0 + margin;
-      }
-
-      StarTrailClient instance = StarTrailClient.getInstance();
-      MinimapManager minimap = instance != null ? instance.getMinimapManager() : null;
-      if (minimap != null) {
-         minimap.renderPreview(context, Minecraft.getInstance(), 0.0F, mapX, mapY, size);
-      }
-
-      this.drawSettingsLabel(context, "\u5b9e\u65f6\u9884\u89c8", px0 + 4, py0 + 3);
    }
 
    private void handleSettingsClick(double mouseX, double mouseY) {
@@ -1109,7 +1040,7 @@ public class WorldMapScreen extends Screen {
             this.playClickSound();
             this.settingsTab = i;
             if (this.isMapHiddenBySettings()) {
-               // 大地图被藏起来时，选项栏/传送点面板没有渲染的意义
+               // 大地图收起来后，选项栏/传送点面板没有渲染意义，顺手收起
                this.contextMenuOpen = false;
                this.selectedWarpId = null;
             }
@@ -1199,7 +1130,7 @@ public class WorldMapScreen extends Screen {
    // ==================== 右键选项栏 ====================
 
    private void openContextMenu(double mouseX, double mouseY) {
-      // 大地图被设置页藏起来时不允许再弹选项栏（否则会对着看不见的地图导航/传送）
+      // 大地图收起来时不允许弹选项栏，免得对着看不见的坐标导航/传送
       if (this.isMapHiddenBySettings()) {
          return;
       }
@@ -1415,7 +1346,7 @@ public class WorldMapScreen extends Screen {
    }
 
    public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
-      // 大地图被设置页藏起来时，滚轮不该再缩放一张看不见的地图
+      // 大地图收起来时滚轮不该再缩放一张看不见的地图（切回来才不会莫名其妙跳变）
       if (this.isMapHiddenBySettings()) {
          return true;
       }
