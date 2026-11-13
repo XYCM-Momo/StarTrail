@@ -61,6 +61,22 @@ public class NavigationManager {
    public double getTargetZ() {
       return this.targetZ;
    }
+   public double getTargetY() {
+      return this.targetY;
+   }
+
+   /** 玩家到目标的直线距离（米）；未导航或不在游戏中时返回 0。 */
+   public double getDistanceToTarget() {
+      Minecraft client = Minecraft.getInstance();
+      if (!this.active || client.player == null) {
+         return 0.0;
+      }
+
+      double dx = client.player.getX() - this.targetX;
+      double dy = client.player.getY() - this.targetY;
+      double dz = client.player.getZ() - this.targetZ;
+      return Math.sqrt(dx * dx + dy * dy + dz * dz);
+   }
 
    public List<double[]> getPath() {
       return this.path;

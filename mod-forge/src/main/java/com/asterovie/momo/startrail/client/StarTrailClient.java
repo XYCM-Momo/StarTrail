@@ -6,6 +6,7 @@ import com.asterovie.momo.startrail.client.image.MapImageManager;
 import com.asterovie.momo.startrail.client.mythic.MobHeadManager;
 import com.asterovie.momo.startrail.client.mythic.MythicMobStore;
 import com.asterovie.momo.startrail.client.nav.NavigationManager;
+import com.asterovie.momo.startrail.client.nav.NavMarkerOverlay;
 import com.asterovie.momo.startrail.client.network.NetworkHandler;
 import com.asterovie.momo.startrail.client.region.PolygonRegionStore;
 import com.asterovie.momo.startrail.client.region.RegionDataStore;
@@ -18,6 +19,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
+import net.minecraftforge.client.event.RenderGuiEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import org.lwjgl.glfw.GLFW;
@@ -84,6 +86,7 @@ public class StarTrailClient {
         this.minimapManager.init();
         StarTrailCommands.register();
         MinecraftForge.EVENT_BUS.addListener(this::onClientTick);
+        MinecraftForge.EVENT_BUS.addListener(this::onRenderGui);
         MinecraftForge.EVENT_BUS.addListener(this::onLoggingOut);
         StarTrailMod.LOGGER.info("StarTrail 客户端初始化完成");
         StarTrailMod.LOGGER.info("地图图片目录: {}", this.mapImageManager.getImagesDir().getAbsolutePath());
@@ -116,8 +119,11 @@ public class StarTrailClient {
         }
     }
 
-    private void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
-        this.regionDataStore.clear();
+    /** HUD 层：导航目标的屏幕标点（地面粒子由 NavigationManager 自己画）。 */
+    private void onRenderGui(RenderGuiEvent.Post event) {
+        NavMarkerOverlay.render(event.getGuiGraphics(), net.minecraft.client.Minecraft.getInstance());
+    }
+    private void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {        this.regionDataStore.clear();
         this.polygonRegionStore.clear();
         this.warpPointStore.clear();
         this.mapImageManager.clear();

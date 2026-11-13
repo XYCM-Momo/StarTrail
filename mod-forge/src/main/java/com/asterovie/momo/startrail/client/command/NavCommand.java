@@ -43,7 +43,7 @@ public final class NavCommand {
 
    public static int help(CommandSourceStack source) {
       feedback(source, Component.literal("\u00a76[StarTrail] \u5bfc\u822a\u547d\u4ee4\u5e2e\u52a9"));
-      feedback(source, Component.literal("\u00a77/startrail nav <x> <z>   \u00a7f\u5bf9\u76ee\u6807\u5750\u6807\u53d1\u8d77\u5bfc\u822a\uff08\u7ea2\u77f3\u7c92\u5b50\u5f15\u8def\uff09"));
+      feedback(source, Component.literal("\u00a77/startrail nav <x> <z>   \u00a7f\u5bf9\u76ee\u6807\u5750\u6807\u53d1\u8d77\u5bfc\u822a\uff08\u7ea2\u77f3\u7c92\u5b50 + \u5c4f\u5e55\u6807\u70b9\uff09"));
       feedback(source, Component.literal("\u00a77/startrail nav stop     \u00a7f\u505c\u6b62\u5f53\u524d\u5bfc\u822a"));
       return 0;
    }

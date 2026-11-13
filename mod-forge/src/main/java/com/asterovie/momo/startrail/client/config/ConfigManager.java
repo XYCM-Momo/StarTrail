@@ -123,6 +123,7 @@ public class ConfigManager {
       public ConfigManager.GeneralConfig general = new ConfigManager.GeneralConfig();
       public ConfigManager.WarpCmdConfig warpCmd = new ConfigManager.WarpCmdConfig();
       public ConfigManager.TpCmdConfig tpCmd = new ConfigManager.TpCmdConfig();
+      public ConfigManager.NavConfig nav = new ConfigManager.NavConfig();
 
       public ClientConfig() {
       }
@@ -160,6 +161,14 @@ public class ConfigManager {
       }
    }
 
+   /** 导航相关。 */
+   public static class NavConfig {
+      /** 屏幕上的导航标点（视野内准星 + 视野外贴边箭头）；关掉后只剩地面粒子。 */
+      public boolean showMarker = true;
+
+      public NavConfig() {
+      }
+   }
    public static class WarpCmdConfig {
       public String navigate = "/startrail warp nav {id}";
       public String teleport = "/startrail warp tp {id}";
