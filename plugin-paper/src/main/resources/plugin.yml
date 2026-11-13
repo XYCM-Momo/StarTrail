@@ -1,5 +1,5 @@
 name: StarTrail
-version: '1.0.1'
+version: '1.0.2'
 main: com.asterovie.momo.startrail.server.StarTrailPlugin
 api-version: '1.20'
 authors: ['星野尘梦工作室 · 默默']
@@ -24,5 +24,5 @@ permissions:
     description: 允许大地图传送（右键传送到坐标 / /startrail warp tp）
     default: op
   startrail.command.nav:
-    description: 允许向指定玩家下发导航（/startrail nav <玩家> <x> <z> [名称]）
+    description: 允许向指定玩家下发导航（/startrail nav <玩家> <x> <y> <z> [名称]）
     default: op

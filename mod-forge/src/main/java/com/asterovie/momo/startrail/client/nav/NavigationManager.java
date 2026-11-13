@@ -38,6 +38,11 @@ public class NavigationManager {
    private String lastError = "";
    /** 目标名称（服务端下发的导航点名字；本地指令导航时为空，标点只显示坐标与距离）。 */
    private String targetLabel = "";
+   /**
+    * 目标 Y 是否由外部指定（服务端 /startrail nav 带了 Y）。
+    * true = 直接用 targetY，不再按地表推断——楼内/洞穴点位需要它。
+    */
+   private boolean targetYExplicit = false;
    private final List<double[]> path = new ArrayList<>();
    private static final int PARTICLE_PER_TICK = 100;
    private static final int PARTICLE_INTERVAL_TICKS = 4;
@@ -99,12 +104,24 @@ public class NavigationManager {
    }
 
    /**
-    * 发起导航并带上目标名称。
+    * 发起导航并带上目标名称（不指定 Y，按地表高度推断）。
     *
     * @param label 导航点名称（服务端 /startrail nav 下发；本地指令传 null 即可）。
     *              只用于屏幕标点与聊天提示，不参与寻路。
     */
    public boolean startNav(double targetX, double targetZ, String label) {
+      return this.startNav(targetX, Double.NaN, targetZ, label);
+   }
+
+   /**
+    * 发起导航，可精确指定目标 Y。
+    *
+    * @param targetY 目标 Y；传 {@link Double#NaN} 表示不指定，由客户端按该列地表高度推断。
+    *                指定了就严格用它——建筑物内部、地下室、洞穴里的点位必须靠它，
+    *                否则会按「该列最高方块」（屋顶）计算，终点跑到楼上。
+    */
+   public boolean startNav(double targetX, double targetY, double targetZ, String label) {
+      boolean explicitY = !Double.isNaN(targetY);
       Minecraft client = Minecraft.getInstance();
       if (client.player == null || client.level == null) {
          this.lastError = "\u5f53\u524d\u4e0d\u5728\u6e38\u620f\u4e2d";
@@ -128,8 +145,9 @@ public class NavigationManager {
       this.targetX = targetX;
       this.targetZ = targetZ;
       this.targetLabel = label == null ? "" : label;
-      // 目标 Y：参照 /startrail tp 自动判断地表高度，而不是用玩家当前高度
-      this.targetY = this.findSurfaceY(targetX, targetZ);
+      this.targetYExplicit = explicitY;
+      // 指定了 Y 就用指定的；没指定才按地表推断（参照 /startrail tp 的 Y 自判断）
+      this.targetY = explicitY ? targetY : this.findSurfaceY(targetX, targetZ);
       this.active = true;
       this.navWorld = world;
 
@@ -138,6 +156,7 @@ public class NavigationManager {
          this.navWorld = null;
          this.wps = new ArrayList<>();
          this.targetLabel = "";
+         this.targetYExplicit = false;
          this.lastError = "\u70b9\u4f4d\u4e4b\u95f4\u6ca1\u6709\u8fde\u901a\u8def\u5f84\uff08\u8bf7\u5148\u7528 /startrail waypoint link \u8fde\u901a\uff09";
          return false;
       }
@@ -157,8 +176,11 @@ public class NavigationManager {
          return false;
       }
 
-      // 目标区块随接近加载后，自动把目标高度校正为真实地表（远处目标渐进修正）
-      this.targetY = this.findSurfaceY(this.targetX, this.targetZ);
+      // 目标区块随接近加载后，自动把目标高度校正为真实地表（远处目标渐进修正）。
+      // 但外部明确指定了 Y 时不能覆盖：楼内/洞穴点位一旦被改成屋顶高度，终点就跑到楼上去了。
+      if (!this.targetYExplicit) {
+         this.targetY = this.findSurfaceY(this.targetX, this.targetZ);
+      }
 
       Waypoint targetWp = nearest(this.wps, this.targetX, this.targetZ);
 
@@ -256,6 +278,7 @@ public class NavigationManager {
       this.path.clear();
       this.wps = new ArrayList<>();
       this.targetLabel = "";
+      this.targetYExplicit = false;
    }
 
    /** 客户端 tick：路径每 5 tick 重算（跟随玩家移动）；生成粒子；到达目的地自动停止。 */

@@ -378,16 +378,26 @@ public class NetworkHandler {
         double x = buf.readDouble();
         double z = buf.readDouble();
         String label = "";
+        // 以下是后加字段，老服务端不发：读不到就当作「未指定 Y」
+        double y = Double.NaN;
         try {
             if (buf.isReadable()) {
                 label = buf.readUtf();
             }
-        } catch (Exception var8) {
-            StarTrailMod.LOGGER.warn("[NavRecv] 读取导航点名称失败，按空名称处理: {}", var8.getMessage());
+            if (buf.isReadable()) {
+                boolean hasY = buf.readBoolean();
+                if (hasY && buf.isReadable()) {
+                    y = buf.readDouble();
+                }
+            }
+        } catch (Exception var9) {
+            StarTrailMod.LOGGER.warn("[NavRecv] 读取导航点名称/Y 失败，按默认值处理: {}", var9.getMessage());
         }
 
         final String navLabel = label;
-        StarTrailMod.LOGGER.info("[NavRecv] 收到服务端导航指令: stop={} ({}, {}) label='{}'", new Object[]{stop, x, z, navLabel});
+        final double navY = y;
+        StarTrailMod.LOGGER.info("[NavRecv] 收到服务端导航指令: stop={} ({}, {}, {}) label='{}'",
+                new Object[]{stop, x, navY, z, navLabel});
         client.execute(() -> {
             StarTrailClient startrail = StarTrailClient.getInstance();
             NavigationManager nav = startrail != null ? startrail.getNavigationManager() : null;
@@ -401,7 +411,7 @@ public class NetworkHandler {
                 return;
             }
 
-            if (nav.startNav(x, z, navLabel)) {
+            if (nav.startNav(x, navY, z, navLabel)) {
                 String shown = navLabel.isEmpty() ? ("(" + fmt(x) + ", " + fmt(z) + ")") : navLabel;
                 client.player.displayClientMessage(
                         Component.literal("\u00a7a[\u5bfc\u822a] \u670d\u52a1\u5668\u5f00\u59cb\u5bfc\u822a\uff1a\u00a7f" + shown + "\u00a7a\uff0c\u8bf7\u8ddf\u968f\u7ea2\u77f3\u7c92\u5b50"), false);

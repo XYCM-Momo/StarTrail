@@ -69,11 +69,13 @@ public class PacketSender {
     *
     * @param player 目标玩家（必须装了 StarTrail 模组并接收 startrail:main）
     * @param x 目标 X（支持小数）
+    * @param y 目标 Y（支持小数；楼内/洞穴等需要精确高度的点位用它）
     * @param z 目标 Z（支持小数）
     * @param label 导航点名称（显示在屏幕标点和聊天提示上，让玩家知道在往哪走）；可为空
-    * @param stop true 表示停止当前导航（此时忽略 x / z / label）
+    * @param stop true 表示停止当前导航（此时忽略 x / y / z / label）
+    * @param hasY true 表示 y 有效（服务端指定了高度）；false 则由客户端按地表自行推断
     */
-   public void sendNavCommand(Player player, double x, double z, String label, boolean stop) {
+   public void sendNavCommand(Player player, double x, double y, double z, String label, boolean stop, boolean hasY) {
       try {
          PacketSender.PacketBuffer buf = new PacketSender.PacketBuffer();
          buf.writeByte(10);
@@ -81,9 +83,13 @@ public class PacketSender {
          buf.writeDouble(x);
          buf.writeDouble(z);
          buf.writeString(label == null ? "" : label);
+         // 以下是后加字段：先发「是否有 Y」，再发 Y 本身。
+         // 老客户端读到 string label 就结束解析，不会因为多了几个字节出问题。
+         buf.writeBoolean(hasY);
+         buf.writeDouble(hasY ? y : 0.0);
          this.sendPacket(player, buf.toByteArray());
-      } catch (Exception var7) {
-         this.plugin.getLogger().warning("发送导航指令包失败: " + var7.getMessage());
+      } catch (Exception var8) {
+         this.plugin.getLogger().warning("发送导航指令包失败: " + var8.getMessage());
       }
    }
    public void sendMapImageSync(Player player) {

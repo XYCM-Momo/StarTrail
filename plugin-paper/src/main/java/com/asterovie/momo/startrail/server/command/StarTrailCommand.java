@@ -354,11 +354,15 @@ public class StarTrailCommand implements CommandExecutor, TabCompleter {
    }
 
    /**
-    * /startrail nav <玩家> <x> <z> [导航点名称]  —— 让指定玩家开始导航（寻路在客户端完成）
-    * /startrail nav stop <玩家>                 —— 让指定玩家停止导航
+    * /startrail nav <玩家> <x> <y> <z> [导航点名称]  —— 让指定玩家开始导航（寻路在客户端完成）
+    * /startrail nav <玩家> <x> <z> [导航点名称]      —— 旧写法：不指定 Y，由客户端按地表推断
+    * /startrail nav stop <玩家>                     —— 让指定玩家停止导航
     *
     * <p>服务端只下发目标坐标与名称，路径计算、粒子、屏幕标点全部由客户端负责，
     * 因此这条指令只对装了 StarTrail 模组的客户端有效。
+    *
+    * <p><b>为什么要能指定 Y</b>：客户端在不给 Y 时只能取该列的「最高方块」（地表/屋顶），
+    * 所以建筑物内部、地下室、洞穴里的点位会被算到屋顶上方去。需要精确高度时请带 Y。
     */
    private boolean handleNav(CommandSender sender, String[] args) {
       if (!sender.hasPermission("startrail.command.nav")) {
@@ -374,7 +378,7 @@ public class StarTrailCommand implements CommandExecutor, TabCompleter {
             return true;
          }
 
-         this.plugin.getPacketSender().sendNavCommand(target, 0.0, 0.0, "", true);
+         this.plugin.getPacketSender().sendNavCommand(target, 0.0, 0.0, 0.0, "", true, false);
          sender.sendMessage(this.msg("nav-stop-sent", target.getName()));
          return true;
       } else if (args.length < 4) {
@@ -387,21 +391,38 @@ public class StarTrailCommand implements CommandExecutor, TabCompleter {
             return true;
          }
 
+         // 两种情况都支持：
+         //   nav <玩家> <x> <y> <z> [名称]  -> args[2..4] 是坐标，args[5..] 是名称
+         //   nav <玩家> <x> <z>     [名称]  -> args[2..3] 是坐标，args[4..] 是名称（旧写法，Y 交给客户端推断）
          double x;
+         double y = 0.0;
          double z;
+         boolean hasY;
+         int labelStart;
          try {
             x = Double.parseDouble(args[2]);
-            z = Double.parseDouble(args[3]);
-         } catch (NumberFormatException var7) {
+            // 第 4 个参数能不能解析成数字，决定它是 Y 还是（旧写法下的）Z 或名称开头
+            boolean fourthIsNumber = args.length >= 5 && isNumber(args[3]) && isNumber(args[4]);
+            if (fourthIsNumber) {
+               y = Double.parseDouble(args[3]);
+               z = Double.parseDouble(args[4]);
+               hasY = true;
+               labelStart = 5;
+            } else {
+               z = Double.parseDouble(args[3]);
+               hasY = false;
+               labelStart = 4;
+            }
+         } catch (NumberFormatException var8) {
             sender.sendMessage(this.msg("coord-must-number"));
             return true;
          }
 
-         // 第 4 个参数起拼成导航点名称（允许带空格，例如 /startrail nav 默默 100 200 主城传送门）
+         // 剩余参数拼成导航点名称（允许带空格）
          String label = "";
-         if (args.length >= 5) {
+         if (args.length > labelStart) {
             StringBuilder sb = new StringBuilder();
-            for (int i = 4; i < args.length; i++) {
+            for (int i = labelStart; i < args.length; i++) {
                if (sb.length() > 0) {
                   sb.append(' ');
                }
@@ -410,11 +431,25 @@ public class StarTrailCommand implements CommandExecutor, TabCompleter {
             label = sb.toString();
          }
 
-         this.plugin.getPacketSender().sendNavCommand(target, x, z, label, false);
-         sender.sendMessage(this.msg("nav-sent", target.getName(), label.isEmpty() ? ("(" + x + ", " + z + ")") : label));
+         this.plugin.getPacketSender().sendNavCommand(target, x, y, z, label, false, hasY);
+         String shown = label.isEmpty()
+            ? (hasY ? ("(" + x + ", " + y + ", " + z + ")") : ("(" + x + ", " + z + ")"))
+            : label;
+         sender.sendMessage(this.msg("nav-sent", target.getName(), shown));
          return true;
       }
    }
+
+   /** 判断字符串能否解析成数字（用于区分 <x> <y> <z> 与 <x> <z> [名称] 两种写法）。 */
+   private static boolean isNumber(String s) {
+      try {
+         Double.parseDouble(s);
+         return true;
+      } catch (NumberFormatException e) {
+         return false;
+      }
+   }
+
    private boolean handleWarp(CommandSender sender, String[] args) {
       if (args.length < 3 || !args[1].equalsIgnoreCase("tp")) {
          sender.sendMessage(this.msg("warp-usage"));

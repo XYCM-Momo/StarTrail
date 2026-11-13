@@ -18,10 +18,10 @@ StarTrail/
 │
 ├─ dist/                      ★ 成品区：要拿到游戏里用的 jar 都从这里取
 │  ├─ client-mod/
-│  │  ├─ startrail-forge-1.1.3.jar     Forge 客户端模组（MC 1.20.1 / Forge 47.x）★ 当前在用
+│  │  ├─ startrail-forge-1.1.4.jar     Forge 客户端模组（MC 1.20.1 / Forge 47.x）★ 当前在用
 │  │  └─ mmap-fabric-1.9.5.jar         Fabric 客户端模组（上游原版，未改动、不参与改名）
 │  ├─ server-plugin/
-│  │  └─ StarTrail-Plugin-1.0.1.jar    服务端 Paper 插件
+│  │  └─ StarTrail-Plugin-1.0.2.jar    服务端 Paper 插件
 │  └─ SHA256SUMS.txt          成品校验清单（由 tools\verify-dist.ps1 生成/校验）
 │
 ├─ releases/                  历史发布冻结区：每次正式发布存一份，不再改动
@@ -34,7 +34,8 @@ StarTrail/
 │  ├─ mod-1.1.0_plugin-1.0.0/         ← 新增导航屏幕标点（只换客户端）
 │  ├─ mod-1.1.1_plugin-1.0.0/         ← 修导航标点左右镜像（只换客户端）
 │  ├─ mod-1.1.2_plugin-1.0.0/         ← 再修导航标点镜像（只换客户端）
-│  └─ mod-1.1.3_plugin-1.0.1/         ← 服务端可下发导航（两端都换）
+│  ├─ mod-1.1.3_plugin-1.0.1/         ← 服务端可下发导航（两端都换）
+│  └─ mod-1.1.4_plugin-1.0.2/         ← 导航指令支持 Y 轴（两端都换）
 │
 ├─ mod-forge/                 ★ Forge 模组工程（Gradle，可直接编译改代码）
 │  ├─ gradlew.bat             自带 Gradle Wrapper 8.1.1

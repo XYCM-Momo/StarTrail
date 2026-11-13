@@ -86,7 +86,7 @@ warp-tp-success: "&a已传送到传送点 '{0}'（世界: {1}）"
 
 # === 服务端下发导航命令 ===
 # 服务端只把目标坐标与名称发给客户端，寻路/粒子/屏幕标点全部在客户端完成（需装模组）
-nav-usage: "&c用法: /startrail nav <玩家> <x> <z> [导航点名称] 或 /startrail nav stop <玩家>"
+nav-usage: "&c用法: /startrail nav <玩家> <x> <y> <z> [导航点名称]（省略 y 则按地表推断）或 /startrail nav stop <玩家>"
 nav-no-permission: "&c你没有下发导航的权限（需要 startrail.command.nav）"
 # {0} = 玩家名
 nav-player-not-found: "&c玩家不在线: {0}"
@@ -146,7 +146,7 @@ help-map-add: "&b/startrail map add <ID> <文件名> <x1> <z1> <x2> <z2> &7- 添
 help-map-remove: "&b/startrail map remove <ID> &7- 删除地图图片绑定"
 help-map-list: "&b/startrail map list &7- 列出地图图片绑定"
 help-tp: "&b/startrail tp <x> <z> [y] &7- 传送到指定坐标（仅 OP）"
-help-nav: "&b/startrail nav <玩家> <x> <z> [导航点名称] &7- 让该玩家开始导航（需装模组）"
+help-nav: "&b/startrail nav <玩家> <x> <y> <z> [导航点名称] &7- 让该玩家开始导航（楼内点位请带 y；需装模组）"
 help-warp-tp: "&b/startrail warp tp <ID> &7- 传送到传送点（仅 OP）"
 help-waypoint: "&b/startrail waypoint ... &7- 维护导航点位（add/remove/list/link/unlink）"
 help-reload: "&b/startrail reload &7- 重载配置"
