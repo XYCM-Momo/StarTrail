@@ -105,16 +105,16 @@ public final class NavMarkerOverlay {
       double fx = -sinYaw * cosPitch;
       double fy = -sinPitch;
       double fz = cosYaw * cosPitch;
-      // right = (cos(yaw), 0, sin(yaw))
-      // 与 forward 水平正交（点乘恒为 0），且 yaw=0 朝 +Z 时 right=+X（面朝南、右手朝东），
-      // 与游戏内观感一致。曾误改成 -sin(yaw)：它只在 yaw=0 成立，一转视角左右就镜像。
-      double rx = cosYaw;
+      // right = (-cos(yaw), 0, -sin(yaw))
+      // 即 Camera#getLeftVector() 取反。定标用的是「转身不变量」：
+      // 目标固定在世界某处、玩家向右转（yaw 增大）时，目标必须往屏幕左边走。
+      double rx = -cosYaw;
       double ry = 0.0;
-      double rz = sinYaw;
-      // up = forward × right，展开写全避免漏项（pitch≠0 时漏项会让上下翻转）
-      double ux = fy * rz - fz * ry;
-      double uy = fz * rx - fx * rz;
-      double uz = fx * ry - fy * rx;
+      double rz = -sinYaw;
+      // up = right × forward（与上面的 right 配套；写成 forward × right 会让上下翻转）
+      double ux = ry * fz - rz * fy;
+      double uy = rz * fx - rx * fz;
+      double uz = rx * fy - ry * fx;
 
       double depth = dx * fx + dy * fy + dz * fz;
       if (depth <= 0.05) {
@@ -177,13 +177,20 @@ public final class NavMarkerOverlay {
    ) {
       double px = client.player != null ? client.player.getX() : 0.0;
       double pz = client.player != null ? client.player.getZ() : 0.0;
-      // 目标相对玩家的方位角：atan2(dx, dz) 使「正前 = 0、屏幕右侧 = +90°」。
-      // 相机 yaw 增大是向右转，补偿方向必须与 projectToScreen 的 right=(cos y,0,sin y) 配套：
-      // 目标落在玩家正右方时 bearing = 90° - yaw，因此 rel = bearing + yaw。写成减号会左右镜像。
-      double bearing = Math.toDegrees(Math.atan2(nav.getTargetX() - px, nav.getTargetZ() - pz));
+      // 直接用与 projectToScreen 同源的 right / forward 求「目标相对屏幕上方」的角度，
+      // 不再单独推 atan2(bearing ± yaw) —— 那套和投影各写一套三角函数，改一处漏一处就会左右打架。
+      //   h = 目标方向 · right   （屏幕横向分量，正为右）
+      //   d = 目标方向 · forward （纵深分量，正为前）
+      //   rel = atan2(h, d)：0 = 正前（贴在上边中间），+90° = 正右，±180° = 正后，-90° = 正左
       float yaw = client.gameRenderer.getMainCamera().getYRot();
-      double relDeg = Mth.wrapDegrees((float)(bearing + (double)yaw));
-      double rel = Math.toRadians(relDeg);
+      double yawRad = Math.toRadians((double)yaw);
+      double hx = nav.getTargetX() - px;
+      double hz = nav.getTargetZ() - pz;
+      double fwdX = -Math.sin(yawRad);
+      double fwdZ = Math.cos(yawRad);
+      double rightX = -Math.cos(yawRad);
+      double rightZ = -Math.sin(yawRad);
+      double rel = Math.atan2(hx * rightX + hz * rightZ, hx * fwdX + hz * fwdZ);
 
       // 屏幕椭圆上的落点：rel=0（正前）落在正上方，顺时针沿边缘走
       double cx = (double)screenW / 2.0;
