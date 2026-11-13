@@ -106,12 +106,15 @@ public final class NavMarkerOverlay {
       double fy = -sinPitch;
       double fz = cosYaw * cosPitch;
       // right = (cos(yaw), 0, sin(yaw))
+      // 与 forward 水平正交（点乘恒为 0），且 yaw=0 朝 +Z 时 right=+X（面朝南、右手朝东），
+      // 与游戏内观感一致。曾误改成 -sin(yaw)：它只在 yaw=0 成立，一转视角左右就镜像。
       double rx = cosYaw;
+      double ry = 0.0;
       double rz = sinYaw;
-      // up = forward × right
-      double ux = fy * rz;
+      // up = forward × right，展开写全避免漏项（pitch≠0 时漏项会让上下翻转）
+      double ux = fy * rz - fz * ry;
       double uy = fz * rx - fx * rz;
-      double uz = -fy * rx;
+      double uz = fx * ry - fy * rx;
 
       double depth = dx * fx + dy * fy + dz * fz;
       if (depth <= 0.05) {
@@ -175,7 +178,8 @@ public final class NavMarkerOverlay {
       double px = client.player != null ? client.player.getX() : 0.0;
       double pz = client.player != null ? client.player.getZ() : 0.0;
       // 目标相对玩家的方位角：atan2(dx, dz) 使「正前 = 0、屏幕右侧 = +90°」。
-      // 相机 yaw 增大是向 -X 转，所以补偿时是加、不是减（减会让左右镜像）。
+      // 相机 yaw 增大是向右转，补偿方向必须与 projectToScreen 的 right=(cos y,0,sin y) 配套：
+      // 目标落在玩家正右方时 bearing = 90° - yaw，因此 rel = bearing + yaw。写成减号会左右镜像。
       double bearing = Math.toDegrees(Math.atan2(nav.getTargetX() - px, nav.getTargetZ() - pz));
       float yaw = client.gameRenderer.getMainCamera().getYRot();
       double relDeg = Mth.wrapDegrees((float)(bearing + (double)yaw));
