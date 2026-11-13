@@ -71,10 +71,11 @@ public final class NavMarkerOverlay {
       }
 
       double[] projected = projectToScreen(client, nav, screenW, screenH);
+      String targetLabel = nav.getTargetLabel();
       if (projected != null) {
-         drawOnScreenMarker(ctx, client.font, (float)projected[0], (float)projected[1], distance);
+         drawOnScreenMarker(ctx, client.font, (float)projected[0], (float)projected[1], distance, targetLabel);
       } else {
-         drawOffScreenMarker(ctx, client.font, client, nav, screenW, screenH, distance);
+         drawOffScreenMarker(ctx, client.font, client, nav, screenW, screenH, distance, targetLabel);
       }
    }
 
@@ -140,8 +141,8 @@ public final class NavMarkerOverlay {
 
       return new double[]{screenX, screenY};
    }
-   /** 目标在视野内：四角准星 + 中心点 + 距离。 */
-   private static void drawOnScreenMarker(GuiGraphics ctx, Font font, float screenX, float screenY, double distance) {
+   /** 目标在视野内：四角准星 + 中心点 + 名称与距离。 */
+   private static void drawOnScreenMarker(GuiGraphics ctx, Font font, float screenX, float screenY, double distance, String targetLabel) {
       int cx = Mth.floor(screenX);
       int cy = Mth.floor(screenY);
       int arm = 5;
@@ -158,7 +159,10 @@ public final class NavMarkerOverlay {
       // 中心点
       ctx.fill(cx - 1, cy - 1, cx + 1, cy + 1, COLOR_PRIMARY);
 
-      String label = "导航目标  " + formatDistance(distance);
+      // 有名称（服务端 /startrail nav 下发的导航点）就把它顶在最前面，玩家一眼知道在往哪走
+      String label = targetLabel.isEmpty()
+         ? "导航目标  " + formatDistance(distance)
+         : targetLabel + "  " + formatDistance(distance);
       int w = font.width(label);
       int lx = cx - w / 2;
       int ly = cy - arm - gap - 13;
@@ -173,7 +177,7 @@ public final class NavMarkerOverlay {
     * 那样目标在身后时方向会反。
     */
    private static void drawOffScreenMarker(
-      GuiGraphics ctx, Font font, Minecraft client, NavigationManager nav, int screenW, int screenH, double distance
+      GuiGraphics ctx, Font font, Minecraft client, NavigationManager nav, int screenW, int screenH, double distance, String targetLabel
    ) {
       double px = client.player != null ? client.player.getX() : 0.0;
       double pz = client.player != null ? client.player.getZ() : 0.0;
@@ -216,8 +220,8 @@ public final class NavMarkerOverlay {
       drawLine(ctx, tipX, tipY, baseX - perpX * size * 0.55, baseY - perpY * size * 0.55);
       ctx.fill(ix - 2, iy - 2, ix + 2, iy + 2, COLOR_PRIMARY);
 
-      // 距离文字：贴着标点，但夹在屏幕内
-      String label = formatDistance(distance);
+      // 贴边文字：有名称就「名称  距离」，否则只有距离；夹在屏幕内
+      String label = targetLabel.isEmpty() ? formatDistance(distance) : targetLabel + "  " + formatDistance(distance);
       int tw = font.width(label);
       int labelX = Mth.clamp(ix - tw / 2, 2, Math.max(2, screenW - tw - 2));
       int labelY = Mth.clamp(iy + 11, 2, Math.max(2, screenH - 12));

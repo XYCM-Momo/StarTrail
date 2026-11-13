@@ -50,6 +50,8 @@ public class StarTrailCommand implements CommandExecutor, TabCompleter {
                return this.handleReload(sender, args);
             case "map":
                return this.handleMap(sender, args);
+            case "nav":
+               return this.handleNav(sender, args);
             case "tp":
                return this.handleTp(sender, args);
             case "warp":
@@ -351,6 +353,68 @@ public class StarTrailCommand implements CommandExecutor, TabCompleter {
       }
    }
 
+   /**
+    * /startrail nav <玩家> <x> <z> [导航点名称]  —— 让指定玩家开始导航（寻路在客户端完成）
+    * /startrail nav stop <玩家>                 —— 让指定玩家停止导航
+    *
+    * <p>服务端只下发目标坐标与名称，路径计算、粒子、屏幕标点全部由客户端负责，
+    * 因此这条指令只对装了 StarTrail 模组的客户端有效。
+    */
+   private boolean handleNav(CommandSender sender, String[] args) {
+      if (!sender.hasPermission("startrail.command.nav")) {
+         sender.sendMessage(this.msg("nav-no-permission"));
+         return true;
+      } else if (args.length < 3) {
+         sender.sendMessage(this.msg("nav-usage"));
+         return true;
+      } else if (args[1].equalsIgnoreCase("stop")) {
+         Player target = Bukkit.getPlayerExact(args[2]);
+         if (target == null) {
+            sender.sendMessage(this.msg("nav-player-not-found", args[2]));
+            return true;
+         }
+
+         this.plugin.getPacketSender().sendNavCommand(target, 0.0, 0.0, "", true);
+         sender.sendMessage(this.msg("nav-stop-sent", target.getName()));
+         return true;
+      } else if (args.length < 4) {
+         sender.sendMessage(this.msg("nav-usage"));
+         return true;
+      } else {
+         Player target = Bukkit.getPlayerExact(args[1]);
+         if (target == null) {
+            sender.sendMessage(this.msg("nav-player-not-found", args[1]));
+            return true;
+         }
+
+         double x;
+         double z;
+         try {
+            x = Double.parseDouble(args[2]);
+            z = Double.parseDouble(args[3]);
+         } catch (NumberFormatException var7) {
+            sender.sendMessage(this.msg("coord-must-number"));
+            return true;
+         }
+
+         // 第 4 个参数起拼成导航点名称（允许带空格，例如 /startrail nav 默默 100 200 主城传送门）
+         String label = "";
+         if (args.length >= 5) {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 4; i < args.length; i++) {
+               if (sb.length() > 0) {
+                  sb.append(' ');
+               }
+               sb.append(args[i]);
+            }
+            label = sb.toString();
+         }
+
+         this.plugin.getPacketSender().sendNavCommand(target, x, z, label, false);
+         sender.sendMessage(this.msg("nav-sent", target.getName(), label.isEmpty() ? ("(" + x + ", " + z + ")") : label));
+         return true;
+      }
+   }
    private boolean handleWarp(CommandSender sender, String[] args) {
       if (args.length < 3 || !args[1].equalsIgnoreCase("tp")) {
          sender.sendMessage(this.msg("warp-usage"));
@@ -606,6 +670,7 @@ public class StarTrailCommand implements CommandExecutor, TabCompleter {
       sender.sendMessage(this.msg("help-map-remove"));
       sender.sendMessage(this.msg("help-map-list"));
       sender.sendMessage(this.msg("help-tp"));
+      sender.sendMessage(this.msg("help-nav"));
       sender.sendMessage(this.msg("help-warp-tp"));
       sender.sendMessage(this.msg("help-waypoint"));
       sender.sendMessage(this.msg("help-reload"));
@@ -618,10 +683,14 @@ public class StarTrailCommand implements CommandExecutor, TabCompleter {
    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
       List<String> completions = new ArrayList<>();
       if (args.length == 1) {
-         completions.addAll(Arrays.asList("list", "info", "reload", "map", "tp", "warp", "waypoint", "crypt", "help"));
+         completions.addAll(Arrays.asList("list", "info", "reload", "map", "tp", "nav", "warp", "waypoint", "crypt", "help"));
       } else if (args.length == 2) {
          String subCommand = args[0].toLowerCase();
-         if (subCommand.equals("list")) {
+         if (subCommand.equals("nav")) {
+            // 第二个参数：在线玩家名，或 stop
+            completions.add("stop");
+            this.plugin.getServer().getOnlinePlayers().forEach(p -> completions.add(p.getName()));
+         } else if (subCommand.equals("list")) {
             this.plugin.getServer().getWorlds().forEach(world -> completions.add(world.getName()));
          } else if (subCommand.equals("info")) {
             completions.addAll(this.plugin.getPolygonRegionManager().getAll().stream().map(PolygonRegion::getId).collect(Collectors.toList()));
@@ -631,6 +700,11 @@ public class StarTrailCommand implements CommandExecutor, TabCompleter {
             completions.addAll(Arrays.asList("tp"));
          } else if (subCommand.equals("waypoint")) {
             completions.addAll(Arrays.asList("add", "remove", "list", "link", "unlink", "help"));
+         }
+      } else if (args.length == 3 && args[0].equalsIgnoreCase("nav")) {
+         // /startrail nav stop <玩家> —— 第三个参数补全在线玩家
+         if (args[1].equalsIgnoreCase("stop")) {
+            this.plugin.getServer().getOnlinePlayers().forEach(p -> completions.add(p.getName()));
          }
       } else if (args.length == 3 && args[0].equalsIgnoreCase("map")) {
          if (args[1].toLowerCase().equals("remove")) {

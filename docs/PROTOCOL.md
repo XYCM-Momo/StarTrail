@@ -45,6 +45,7 @@ Bukkit 只给「已注册该通道」的玩家发 `sendPluginMessage`，所以�
 | 7 | 传送点同步 Warps | S→C | 进服 / reload | |
 | 8 | 世界切换 WorldChange | S→C | 玩家换维度 | |
 | 9 | MythicMobs 同步 | S→C | 每 2 秒 | 需要服务端装 MythicMobs |
+| 10 | 导航指令 NavCommand | S→C | OP 执行 `/startrail nav` | 需要客户端装模组；v1.1.3 起 |
 
 ## 4. 各包字段明细
 
@@ -137,6 +138,27 @@ N × {
 ```
 
 扫描半径由 `settings.mythic-mob-track-radius`（默认 128 格）控制，每 2 秒一次。
+
+### 包 10 · 导航指令 NavCommand
+
+服务端用 `/startrail nav <玩家> <x> <z> [导航点名称]` 触发。**只下发目标，寻路在客户端完成**——
+服务端不发路径、不参与计算，客户端收到后调自己的 `NavigationManager.startNav(x, z, label)`。
+
+```
+byte   包类型 = 10
+boolean stop         ← true = 停止当前导航（此时忽略后面所有字段）
+double  x            ← 目标 X（支持小数）
+double  z            ← 目标 Z（支持小数）
+string  label        ← 导航点名称，显示在屏幕标点与聊天提示上；可为空串
+```
+
+**兼容性说明**：
+
+* `label` 是后加字段。客户端用 `buf.isReadable()` + `try/catch` 读取，
+  老服务端不发该字段时按空串处理，不会崩。
+* 老客户端（1.1.2 及以前）收到类型 10 会走 `default` 分支，只打一条「未知数据包类型」日志，
+  **不会崩、不影响其它功能**，但也不会导航——所以要让服务端指令生效，**客户端必须换到 1.1.3+**。
+* 目标世界不随包下发：客户端只在「自己当前所在世界 == 导航世界」时显示，避免跨维度乱指。
 
 ## 5. 已知坑 / 待确认问题（整理时发现）
 

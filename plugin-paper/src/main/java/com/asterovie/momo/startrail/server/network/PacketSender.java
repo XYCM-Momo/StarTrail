@@ -61,6 +61,31 @@ public class PacketSender {
       }
    }
 
+   /**
+    * 下发「开始导航」指令（包类型 10）。客户端收到后按自己的寻路逻辑导航到 (x, z)。
+    *
+    * <p>导航全程在客户端算：服务端只负责告诉它目标在哪、叫什么名字，不发路径、不参与寻路。
+    * 目标世界由客户端自行判断（它只在自己所在世界匹配），服务端这里不传世界名。
+    *
+    * @param player 目标玩家（必须装了 StarTrail 模组并接收 startrail:main）
+    * @param x 目标 X（支持小数）
+    * @param z 目标 Z（支持小数）
+    * @param label 导航点名称（显示在屏幕标点和聊天提示上，让玩家知道在往哪走）；可为空
+    * @param stop true 表示停止当前导航（此时忽略 x / z / label）
+    */
+   public void sendNavCommand(Player player, double x, double z, String label, boolean stop) {
+      try {
+         PacketSender.PacketBuffer buf = new PacketSender.PacketBuffer();
+         buf.writeByte(10);
+         buf.writeBoolean(stop);
+         buf.writeDouble(x);
+         buf.writeDouble(z);
+         buf.writeString(label == null ? "" : label);
+         this.sendPacket(player, buf.toByteArray());
+      } catch (Exception var7) {
+         this.plugin.getLogger().warning("发送导航指令包失败: " + var7.getMessage());
+      }
+   }
    public void sendMapImageSync(Player player) {
       this.sendMapImageSync(player, true);
    }

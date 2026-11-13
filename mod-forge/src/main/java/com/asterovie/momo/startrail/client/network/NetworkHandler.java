@@ -7,6 +7,7 @@ import com.asterovie.momo.startrail.client.image.MapImage;
 import com.asterovie.momo.startrail.client.image.MapImageManager;
 import com.asterovie.momo.startrail.client.mythic.MythicMob;
 import com.asterovie.momo.startrail.client.mythic.MythicMobStore;
+import com.asterovie.momo.startrail.client.nav.NavigationManager;
 import com.asterovie.momo.startrail.client.region.MapRegion;
 import com.asterovie.momo.startrail.client.region.PolygonRegion;
 import com.asterovie.momo.startrail.client.region.PolygonRegionStore;
@@ -19,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.NetworkRegistry;
@@ -49,6 +51,8 @@ public class NetworkHandler {
     public static final byte PACKET_WARPS = 7;
     public static final byte PACKET_WORLD_CHANGE = 8;
     public static final byte PACKET_MYTHIC_MOBS = 9;
+    /** 服务端下发的「开始/停止导航」（op 用 /startrail nav <玩家> <x> <z> 触发）。 */
+    public static final byte PACKET_NAV_COMMAND = 10;
 
     private static final String PROTOCOL_VERSION = "1";
 
@@ -89,7 +93,8 @@ public class NetworkHandler {
         }
         messagesRegistered = true;
 
-        for (int type = PACKET_HANDSHAKE; type <= PACKET_MYTHIC_MOBS; type++) {
+        // 注意上界要跟着最大的包类型走，否则新包注册不上、客户端会直接丢弃
+        for (int type = PACKET_HANDSHAKE; type <= PACKET_NAV_COMMAND; type++) {
             final int packetType = type;
             CHANNEL_IMPL.registerMessage(
                     packetType,
@@ -149,6 +154,9 @@ public class NetworkHandler {
                 break;
             case PACKET_MYTHIC_MOBS:
                 this.handleMythicMobs(client, buf);
+                break;
+            case PACKET_NAV_COMMAND:
+                this.handleNavCommand(client, buf);
                 break;
             default:
                 StarTrailMod.LOGGER.warn("未知数据包类型: 0x{}", Integer.toHexString(packetType & 255));
@@ -357,6 +365,56 @@ public class NetworkHandler {
                                 w.getDescr() == null ? 0 : w.getDescr().length()});
             }
         });
+    }
+
+    /**
+     * 服务端下发的导航指令（包类型 10）：/startrail nav <玩家> <x> <z> [名称]。
+     *
+     * <p>服务端只给目标坐标和名字，寻路与显示全部在客户端完成。
+     * 名称字段是后加的，读失败时退回空串（兼容只发坐标的服务端版本）。
+     */
+    private void handleNavCommand(Minecraft client, FriendlyByteBuf buf) {
+        boolean stop = buf.readBoolean();
+        double x = buf.readDouble();
+        double z = buf.readDouble();
+        String label = "";
+        try {
+            if (buf.isReadable()) {
+                label = buf.readUtf();
+            }
+        } catch (Exception var8) {
+            StarTrailMod.LOGGER.warn("[NavRecv] 读取导航点名称失败，按空名称处理: {}", var8.getMessage());
+        }
+
+        final String navLabel = label;
+        StarTrailMod.LOGGER.info("[NavRecv] 收到服务端导航指令: stop={} ({}, {}) label='{}'", new Object[]{stop, x, z, navLabel});
+        client.execute(() -> {
+            StarTrailClient startrail = StarTrailClient.getInstance();
+            NavigationManager nav = startrail != null ? startrail.getNavigationManager() : null;
+            if (nav == null || client.player == null) {
+                return;
+            }
+
+            if (stop) {
+                nav.stopNav();
+                client.player.displayClientMessage(Component.literal("\u00a7e[\u5bfc\u822a] \u670d\u52a1\u5668\u5df2\u505c\u6b62\u4f60\u7684\u5bfc\u822a"), false);
+                return;
+            }
+
+            if (nav.startNav(x, z, navLabel)) {
+                String shown = navLabel.isEmpty() ? ("(" + fmt(x) + ", " + fmt(z) + ")") : navLabel;
+                client.player.displayClientMessage(
+                        Component.literal("\u00a7a[\u5bfc\u822a] \u670d\u52a1\u5668\u5f00\u59cb\u5bfc\u822a\uff1a\u00a7f" + shown + "\u00a7a\uff0c\u8bf7\u8ddf\u968f\u7ea2\u77f3\u7c92\u5b50"), false);
+            } else {
+                client.player.displayClientMessage(
+                        Component.literal("\u00a7c[\u5bfc\u822a] \u670d\u52a1\u5668\u4e0b\u53d1\u7684\u5bfc\u822a\u5931\u8d25\uff1a" + nav.getLastError()), false);
+            }
+        });
+    }
+
+    /** 坐标显示：整数去掉小数尾巴（58.0 -> 58）。 */
+    private static String fmt(double v) {
+        return v == Math.floor(v) && !Double.isInfinite(v) ? String.valueOf((long)v) : String.valueOf(v);
     }
 
     private MapRegion readRegion(FriendlyByteBuf buf) {

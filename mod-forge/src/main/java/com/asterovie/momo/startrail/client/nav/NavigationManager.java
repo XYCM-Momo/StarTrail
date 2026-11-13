@@ -36,6 +36,8 @@ public class NavigationManager {
    /** 当前导航世界的点位（启动时加载缓存，供每 5 tick 重算路径）。 */
    private List<Waypoint> wps = new ArrayList<>();
    private String lastError = "";
+   /** 目标名称（服务端下发的导航点名字；本地指令导航时为空，标点只显示坐标与距离）。 */
+   private String targetLabel = "";
    private final List<double[]> path = new ArrayList<>();
    private static final int PARTICLE_PER_TICK = 100;
    private static final int PARTICLE_INTERVAL_TICKS = 4;
@@ -82,12 +84,27 @@ public class NavigationManager {
       return this.path;
    }
 
+   /** 目标名称；没有则为空字符串（标点据此决定是否显示名字）。 */
+   public String getTargetLabel() {
+      return this.targetLabel;
+   }
+
    public String getLastError() {
       return this.lastError;
    }
 
    /** 发起导航；失败返回 false，原因见 {@link #getLastError()}。 */
    public boolean startNav(double targetX, double targetZ) {
+      return this.startNav(targetX, targetZ, null);
+   }
+
+   /**
+    * 发起导航并带上目标名称。
+    *
+    * @param label 导航点名称（服务端 /startrail nav 下发；本地指令传 null 即可）。
+    *              只用于屏幕标点与聊天提示，不参与寻路。
+    */
+   public boolean startNav(double targetX, double targetZ, String label) {
       Minecraft client = Minecraft.getInstance();
       if (client.player == null || client.level == null) {
          this.lastError = "\u5f53\u524d\u4e0d\u5728\u6e38\u620f\u4e2d";
@@ -110,6 +127,7 @@ public class NavigationManager {
       this.wps = wps;
       this.targetX = targetX;
       this.targetZ = targetZ;
+      this.targetLabel = label == null ? "" : label;
       // 目标 Y：参照 /startrail tp 自动判断地表高度，而不是用玩家当前高度
       this.targetY = this.findSurfaceY(targetX, targetZ);
       this.active = true;
@@ -119,6 +137,7 @@ public class NavigationManager {
          this.active = false;
          this.navWorld = null;
          this.wps = new ArrayList<>();
+         this.targetLabel = "";
          this.lastError = "\u70b9\u4f4d\u4e4b\u95f4\u6ca1\u6709\u8fde\u901a\u8def\u5f84\uff08\u8bf7\u5148\u7528 /startrail waypoint link \u8fde\u901a\uff09";
          return false;
       }
@@ -236,6 +255,7 @@ public class NavigationManager {
       this.navWorld = null;
       this.path.clear();
       this.wps = new ArrayList<>();
+      this.targetLabel = "";
    }
 
    /** 客户端 tick：路径每 5 tick 重算（跟随玩家移动）；生成粒子；到达目的地自动停止。 */
