@@ -58,6 +58,20 @@ Copy-Item $src (Join-Path $mods $name) -Force
 
 数据目录同理在各自版本的 `startrail\` 和 `config\` 下。
 
+### 3.0 换插件时别忘了同步 `language.yml`
+
+插件**运行时读的是数据目录里的** `plugins/StarTrail/language.yml`，不是 jar 里那份。
+所以新增文案键之后，只换 jar 不会让新键生效——缺键时 `LanguageManager` 会直接输出
+`Missing message: xxx`，指令能跑但玩家看到的是一行英文报错。
+
+**换插件时顺手做一次**：把新版本 `language.yml` 里新增的键**追加**到线上那份
+（不要整份覆盖，线上那份可能被服主改过）。2026-11-14 部署 1.0.1 时就踩过这个：线上 language.yml 缺
+`nav-usage` / `nav-sent` / `help-nav` 等 6 个键，已追加补齐，备份在
+`时旅服务端\_plugin-rollback\language.yml.bak-20261114`。
+
+**回滚提示**：`_plugin-rollback\` 要放在 `plugins\` **外面**（Paper 会扫描 plugins 下子目录里的 jar，
+放里面可能被当成重复插件加载）。
+
 ## 3. 服务端部署
 
 | 放什么 | 放到哪 |
