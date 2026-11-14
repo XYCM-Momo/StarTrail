@@ -364,6 +364,23 @@ public class StarTrailCommand implements CommandExecutor, TabCompleter {
     * <p><b>为什么要能指定 Y</b>：客户端在不给 Y 时只能取该列的「最高方块」（地表/屋顶），
     * 所以建筑物内部、地下室、洞穴里的点位会被算到屋顶上方去。需要精确高度时请带 Y。
     */
+   /**
+    * 导航指令的「成功回显」：写控制台日志，**不回给玩家**。
+    *
+    * <p>原因：被导航的玩家本来就会收到客户端那条聊天提示；若执行者恰好就是该玩家，
+    * 两条消息会同时弹给他，看起来就是重复刷屏。
+    * 错误类提示（用法不对、玩家不在线、没权限）仍照常回给执行者，否则他不知道哪里输错了。
+    *
+    * <p>若执行者是控制台，则把这一行也发给它，控制台侧仍能看到结果。
+    */
+   private void navFeedback(CommandSender sender, String action, String targetName, String detail) {
+      String line = "[导航] " + action + " " + targetName + (detail == null || detail.isEmpty() ? "" : "  " + detail);
+      this.plugin.getLogger().info(line);
+      if (!(sender instanceof Player)) {
+         sender.sendMessage(ChatColor.DARK_AQUA + line);
+      }
+   }
+
    private boolean handleNav(CommandSender sender, String[] args) {
       if (!sender.hasPermission("startrail.command.nav")) {
          sender.sendMessage(this.msg("nav-no-permission"));
@@ -379,7 +396,8 @@ public class StarTrailCommand implements CommandExecutor, TabCompleter {
          }
 
          this.plugin.getPacketSender().sendNavCommand(target, 0.0, 0.0, 0.0, "", true, false);
-         sender.sendMessage(this.msg("nav-stop-sent", target.getName()));
+         // 成功回显只走控制台：被导航玩家自己会收到客户端那条「服务器已停止你的导航」
+         this.navFeedback(sender, "已让", target.getName(), "停止导航");
          return true;
       } else if (args.length < 4) {
          sender.sendMessage(this.msg("nav-usage"));
@@ -435,7 +453,8 @@ public class StarTrailCommand implements CommandExecutor, TabCompleter {
          String shown = label.isEmpty()
             ? (hasY ? ("(" + x + ", " + y + ", " + z + ")") : ("(" + x + ", " + z + ")"))
             : label;
-         sender.sendMessage(this.msg("nav-sent", target.getName(), shown));
+         // 成功回显只走控制台：被导航玩家自己会收到客户端那条「服务器开始导航」
+         this.navFeedback(sender, "已向", target.getName(), "下发导航 " + shown);
          return true;
       }
    }

@@ -14,7 +14,7 @@ import net.minecraft.util.Mth;
  * {@link NavigationManager} 用红石粒子铺出路线，屏幕这一层再补一个始终可见的目标指示——
  * <ul>
  *   <li>目标在视野内：在目标的屏幕位置画准星 + 距离；</li>
- *   <li>目标在视野外或身后：把标点贴到屏幕边缘，用「圆圈 + 中心点」标出方位并显示距离。</li>
+ *   <li>目标在视野外或身后：把标点贴到屏幕边缘，用一个小点标出方位并显示距离。</li>
  * </ul>
  *
  * <p>只做 HUD 绘制，不改动网络协议，属于纯客户端功能。
@@ -173,7 +173,7 @@ public final class NavMarkerOverlay {
    }
 
    /**
-    * 目标在视野外：把标点贴到屏幕边缘，箭头指出方向，附距离。
+    * 目标在视野外：把标点贴到屏幕边缘，标出方位，附距离。
     *
     * <p>方向用「目标相对玩家的水平方位」算，而不是拿相机投影结果外推——
     * 那样目标在身后时方向会反。
@@ -210,11 +210,10 @@ public final class NavMarkerOverlay {
       int ix = Mth.floor(ex);
       int iy = Mth.floor(ey);
 
-      // 视野外标记：圆圈 + 中心点。
-      // 曾用「箭头指出方向」，但箭头依赖朝向角，视角一偏就错位、看起来像指错方向；
-      // 圆圈是个纯位置标记——落点本身就表示方位（贴在上/下/左/右哪一边），不需要再画朝向。
-      drawRing(ctx, ex, ey, 6.0);
-      ctx.fill(ix - 1, iy - 1, ix + 1, iy + 1, COLOR_PRIMARY);
+      // 视野外标记：一个小方点。
+      // 演变：箭头（依赖朝向角，视角一偏就错位）→ 圆圈+中心点（形状仍偏重）→ 现在只留一个点。
+      // 落点本身就表示方位（贴在屏幕哪一侧），点已经足够，不必再画任何形状。
+      ctx.fill(ix - 2, iy - 2, ix + 3, iy + 3, COLOR_PRIMARY);
 
       // 贴边文字：有名称就「名称  距离」，否则只有距离；夹在屏幕内
       String label = targetLabel.isEmpty() ? formatDistance(distance) : targetLabel + "  " + formatDistance(distance);
@@ -223,44 +222,6 @@ public final class NavMarkerOverlay {
       int labelY = Mth.clamp(iy + 11, 2, Math.max(2, screenH - 12));
       ctx.fill(labelX - 2, labelY - 1, labelX + tw + 2, labelY + 9, COLOR_TEXT_BG);
       ctx.drawString(font, label, labelX, labelY, COLOR_TEXT, false);
-   }
-
-   /**
-    * 画一个空心圆环（1px 粗），圆心 (cx, cy)，半径 r。
-    *
-    * <p>逐行算水平弦的半宽再填充，比逐点采样更圆，也不会出现断点。
-    */
-   private static void drawRing(GuiGraphics ctx, double cx, double cy, double r) {
-      if (r <= 0.0) {
-         return;
-      }
-
-      int top = Mth.floor(cy - r);
-      int bottom = Mth.ceil(cy + r);
-      int thickness = 1;
-      for (int y = top; y <= bottom; y++) {
-         // 该行到圆心的垂直距离（取行中心），求弦的半宽
-         double dy = (double)y + 0.5 - cy;
-         double inside = r * r - dy * dy;
-         if (inside < 0.0) {
-            continue;
-         }
-
-         double half = Math.sqrt(inside);
-         int x1 = Mth.floor(cx - half);
-         int x2 = Mth.ceil(cx + half);
-         // 只保留靠近圆周的那一层（内缩 thickness），形成空心环
-         double inner = r - (double)thickness - 0.5;
-         double innerInside = inner > 0.0 ? inner * inner - dy * dy : -1.0;
-         if (innerInside > 0.0) {
-            double innerHalf = Math.sqrt(innerInside);
-            // 左右两段弧，中间挖空
-            ctx.fill(x1, y, Mth.floor(cx - innerHalf) + 1, y + 1, COLOR_PRIMARY);
-            ctx.fill(Mth.ceil(cx + innerHalf), y, x2 + 1, y + 1, COLOR_PRIMARY);
-         } else {
-            ctx.fill(x1, y, x2 + 1, y + 1, COLOR_PRIMARY);
-         }
-      }
    }
 
    /** 距离显示：1000 格以内取整，超过则压成「1.2k」，避免长数字占屏幕。 */
