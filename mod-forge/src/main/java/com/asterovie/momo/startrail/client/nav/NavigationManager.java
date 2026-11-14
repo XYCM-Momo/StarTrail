@@ -44,6 +44,8 @@ public class NavigationManager {
     * true = 直接用 targetY，不再按地表推断——楼内/洞穴点位需要它。
     */
    private boolean targetYExplicit = false;
+   /** 导航开始时的视角平滑转向器（只影响朝向，不影响寻路）。 */
+   private final NavViewTurner viewTurner = new NavViewTurner();
    private final List<double[]> path = new ArrayList<>();
    private static final int PARTICLE_PER_TICK = 100;
    private static final int PARTICLE_INTERVAL_TICKS = 4;
@@ -168,6 +170,9 @@ public class NavigationManager {
          return false;
       }
 
+      // 导航真正生效后，把视角平滑转向目标（只改朝向，不动位置、不影响寻路）
+      this.viewTurner.start(client.player, this.targetX, this.targetY, this.targetZ);
+
       this.lastError = "";
       return true;
    }
@@ -286,6 +291,8 @@ public class NavigationManager {
       this.wps = new ArrayList<>();
       this.targetLabel = "";
       this.targetYExplicit = false;
+      // 导航结束了就别再动玩家视角
+      this.viewTurner.cancel();
    }
 
    /** 客户端 tick：路径每 5 tick 重算（跟随玩家移动）；生成粒子；到达目的地自动停止。 */
@@ -308,6 +315,11 @@ public class NavigationManager {
       // 实时刷新：玩家到最近点位的线段随移动更新
       if (client.player.tickCount % PATH_REFRESH_TICKS == 0) {
          this.rebuildPath(client.player.getX(), client.player.getY(), client.player.getZ());
+      }
+
+      // 视角转向推进：每 tick 覆盖朝向，直到对准（转向期间鼠标拖动会被抵消，这是既定行为）
+      if (this.viewTurner.isActive()) {
+         this.viewTurner.tick(client.player);
       }
 
       // 到达判定：水平与垂直都要够近（见 isArrived，屏幕标点也用同一个判据）
