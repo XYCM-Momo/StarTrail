@@ -72,9 +72,12 @@ public final class NavViewTurner {
    }
 
    /**
-    * 每 tick 调用：把玩家朝向朝目标推进一步。
+    * 每帧调用（由 {@code RenderGuiEvent.Post} 驱动）：把玩家朝向朝目标推进一步。
     *
-    * <p>用「每 tick 直接覆盖」而不是累积增量，所以鼠标在转向期间拖动会被抵消——
+    * <p><b>为什么用帧而不是 tick</b>：tick 只有 20Hz，转 90° 时每 tick 要跳 4.5°，
+    * 肉眼就是「一格一格」的。渲染帧通常是 60~144Hz，逐帧推进才平滑。
+    *
+    * <p>用「每帧直接覆盖」而不是累积增量，所以鼠标在转向期间拖动会被抵消——
     * 这是刻意的（作者要求转到对准为止）。
     */
    public void tick(LocalPlayer player) {
@@ -84,8 +87,8 @@ public final class NavViewTurner {
 
       long elapsed = System.currentTimeMillis() - this.startMs;
       double t = this.durationMs <= 0L ? 1.0 : Math.min(1.0, (double)elapsed / (double)this.durationMs);
-      // ease-out：起步快、收尾缓，观感更自然
-      double eased = 1.0 - Math.pow(1.0 - t, 3.0);
+      // ease-in-out（smoothstep）：两端都收着走，中段快，比纯 ease-out 更顺、没有突然启动的顿感
+      double eased = t * t * (3.0 - 2.0 * t);
 
       float yaw = (float)(this.startYaw + (this.targetYawUnwrapped - this.startYaw) * eased);
       float pitch = (float)(this.startPitch + (this.targetPitch - this.startPitch) * eased);

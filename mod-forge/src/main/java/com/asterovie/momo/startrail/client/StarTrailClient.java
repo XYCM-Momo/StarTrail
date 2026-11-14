@@ -17,6 +17,7 @@ import com.asterovie.momo.startrail.client.warp.WarpPointStore;
 import com.asterovie.momo.startrail.client.waypoint.WaypointStore;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.RenderGuiEvent;
@@ -121,9 +122,16 @@ public class StarTrailClient {
 
     /** HUD 层：导航目标的屏幕标点（地面粒子由 NavigationManager 自己画）。 */
     private void onRenderGui(RenderGuiEvent.Post event) {
-        NavMarkerOverlay.render(event.getGuiGraphics(), net.minecraft.client.Minecraft.getInstance());
+        Minecraft client = Minecraft.getInstance();
+        // 视角转向必须逐帧推进：tick 只有 20Hz，转 90 度时每 tick 跳 4.5 度，看起来一格一格的。
+        if (this.navigationManager != null && client.player != null) {
+            this.navigationManager.getViewTurner().tick(client.player);
+        }
+        NavMarkerOverlay.render(event.getGuiGraphics(), client);
     }
-    private void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {        this.regionDataStore.clear();
+
+    private void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        this.regionDataStore.clear();
         this.polygonRegionStore.clear();
         this.warpPointStore.clear();
         this.mapImageManager.clear();

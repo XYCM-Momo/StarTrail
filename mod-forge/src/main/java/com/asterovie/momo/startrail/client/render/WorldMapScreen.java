@@ -1160,6 +1160,8 @@ public class WorldMapScreen extends Screen {
          // 导航至此（所有玩家可用；客户端本地生成路径 + 红石粒子）
          this.contextMenuOpen = false;
          this.startMapNavigation(this.contextMenuTargetX, this.contextMenuTargetZ);
+         // 关掉大地图：导航开始会把视角转向目标，地图留着就看不到转向过程了
+         this.onClose();
       } else if (index == teleportIndex && this.canUseMapTeleport()) {
          this.sendTeleportCommand(this.contextMenuTargetX, this.contextMenuTargetZ);
          this.contextMenuOpen = false;
@@ -1170,7 +1172,7 @@ public class WorldMapScreen extends Screen {
       }
    }
 
-   /** 大地图右键「导航至此」：交给客户端导航管理器，大地图保持打开。 */
+   /** 大地图右键「导航至此」：交给客户端导航管理器；调用方随后会关闭大地图（好让玩家看到视角转向）。 */
    private void startMapNavigation(int targetX, int targetZ) {
       NavigationManager nav = StarTrailClient.getInstance().getNavigationManager();
       Minecraft client = Minecraft.getInstance();

@@ -99,6 +99,11 @@ public class NavigationManager {
    }
 
    /** 目标名称；没有则为空字符串（标点据此决定是否显示名字）。 */
+   /** 视角转向器；由客户端逐帧渲染驱动（见 StarTrailClient.onRenderGui）。 */
+   public NavViewTurner getViewTurner() {
+      return this.viewTurner;
+   }
+
    public String getTargetLabel() {
       return this.targetLabel;
    }
@@ -317,10 +322,6 @@ public class NavigationManager {
          this.rebuildPath(client.player.getX(), client.player.getY(), client.player.getZ());
       }
 
-      // 视角转向推进：每 tick 覆盖朝向，直到对准（转向期间鼠标拖动会被抵消，这是既定行为）
-      if (this.viewTurner.isActive()) {
-         this.viewTurner.tick(client.player);
-      }
 
       // 到达判定：水平与垂直都要够近（见 isArrived，屏幕标点也用同一个判据）
       if (client.player != null && this.isArrived(client.player)) {
