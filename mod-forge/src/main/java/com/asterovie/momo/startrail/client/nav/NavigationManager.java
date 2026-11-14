@@ -14,6 +14,7 @@ import java.util.Set;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.levelgen.Heightmap;
 import org.joml.Vector3f;
 
@@ -48,6 +49,12 @@ public class NavigationManager {
    private static final int PARTICLE_INTERVAL_TICKS = 4;
    /** 路径实时刷新间隔（tick）。 */
    private static final int PATH_REFRESH_TICKS = 5;
+   /** 到达判定：水平半径（格）。与原逻辑一致（3 格）。 */
+   private static final double ARRIVE_HORIZONTAL = 3.0;
+   /** 到达判定：显式指定 Y 时的垂直容差（格）。楼内点位要精确，站在楼下不算到达。 */
+   private static final double ARRIVE_VERTICAL_EXPLICIT = 3.0;
+   /** 到达判定：未指定 Y 时的垂直容差（格）。Y 是推断的地表高度，放宽避免永远结束不了。 */
+   private static final double ARRIVE_VERTICAL_INFERRED = 6.0;
 
    public NavigationManager(WaypointStore waypointStore) {
       this.waypointStore = waypointStore;
@@ -303,20 +310,44 @@ public class NavigationManager {
          this.rebuildPath(client.player.getX(), client.player.getY(), client.player.getZ());
       }
 
-      double dx = client.player.getX() - this.targetX;
-      double dz = client.player.getZ() - this.targetZ;
-      if (dx * dx + dz * dz < 9.0) {
+      // 到达判定：水平与垂直都要够近（见 isArrived，屏幕标点也用同一个判据）
+      if (client.player != null && this.isArrived(client.player)) {
          this.stopNav();
-         if (client.player != null) {
-            client.player.displayClientMessage(Component.literal("\u00a7a[\u5bfc\u822a] \u5df2\u5230\u8fbe\u76ee\u7684\u5730"), false);
-         }
-
+         client.player.displayClientMessage(Component.literal("\u00a7a[\u5bfc\u822a] \u5df2\u5230\u8fbe\u76ee\u7684\u5730"), false);
          return;
       }
 
       if (client.player.tickCount % PARTICLE_INTERVAL_TICKS == 0) {
          this.spawnParticles(client);
       }
+   }
+
+   /**
+    * 判定玩家是否已经到达导航目标：**水平与垂直都必须够近**。
+    *
+    * <p>只比 X/Z 的话，站在楼内点位的正下方（水平距离 0）会被误判为已到达，
+    * 人却还在楼下。垂直容差分两档：
+    * <ul>
+    *   <li>服务端显式指定了 Y → 3 格（要精确，楼下不算到达）；</li>
+    *   <li>未指定 Y（Y 是按地表推断的）→ 6 格，避免斜坡/台阶/洞口附近的推断偏差
+    *       导致「人到了却永远结束不了」。</li>
+    * </ul>
+    * 屏幕标点复用同一个判据，保证「标点消失」与「导航结束」是同一个时刻。
+    */
+   public boolean isArrived(Player player) {
+      if (!this.active || player == null) {
+         return false;
+      }
+
+      double dx = player.getX() - this.targetX;
+      double dz = player.getZ() - this.targetZ;
+      double dy = player.getY() - this.targetY;
+      if (dx * dx + dz * dz >= ARRIVE_HORIZONTAL * ARRIVE_HORIZONTAL) {
+         return false;
+      }
+
+      double verticalLimit = this.targetYExplicit ? ARRIVE_VERTICAL_EXPLICIT : ARRIVE_VERTICAL_INFERRED;
+      return Math.abs(dy) <= verticalLimit;
    }
 
    private void spawnParticles(Minecraft client) {

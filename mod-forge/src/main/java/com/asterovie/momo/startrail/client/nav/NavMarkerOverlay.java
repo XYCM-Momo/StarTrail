@@ -65,8 +65,10 @@ public final class NavMarkerOverlay {
       }
 
       double distance = nav.getDistanceToTarget();
-      // 已经贴到目标跟前时不用再指：3 格内导航本身就会自动结束，这里提前让位，免得标点糊在准星上
-      if (distance < 3.0) {
+      // 已经到目标跟前时让位，免得标点糊在准星上。
+      // 判据要和 NavigationManager 的到达判定一致：只比三维总距离的话，
+      // 站在楼内点位的正下方（水平重合、高度差 5 格）也会被藏掉——那恰恰是最需要指引的时候。
+      if (nav.isArrived(client.player)) {
          return;
       }
 
