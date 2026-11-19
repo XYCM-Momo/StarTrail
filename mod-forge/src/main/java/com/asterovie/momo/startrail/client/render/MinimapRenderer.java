@@ -186,11 +186,15 @@ public class MinimapRenderer {
             }
 
             this.renderYawCone(matrices, centerX, centerY, radius, faceSize, yaw, (float)fov);
-            this.renderPlayerFace(drawContext, client, centerX, centerY, faceSize);
          }
 
+         // 其他玩家头像与导航路径先画，自己的头像最后画，
+         // 否则有别的玩家/路线经过小地图中心时，自己的头像会被压在下面看不见。
          this.renderOtherPlayerFaces(drawContext, client, centerX, centerY, radius, this.zoom, faceSize);
          this.renderNavPath(drawContext, centerX, centerY, playerX, playerZ);
+         if (client.player != null) {
+            this.renderPlayerFace(drawContext, client, centerX, centerY, faceSize);
+         }
          if (square) {
             int bc = -16721665;
             drawContext.fill(mapX - 1, mapY - 1, mapX + this.mapSize + 1, mapY, bc);
