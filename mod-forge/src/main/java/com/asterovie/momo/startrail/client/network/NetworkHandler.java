@@ -53,6 +53,8 @@ public class NetworkHandler {
     public static final byte PACKET_MYTHIC_MOBS = 9;
     /** 服务端下发的「开始/停止导航」（op 用 /startrail nav <玩家> <x> <z> 触发）。 */
     public static final byte PACKET_NAV_COMMAND = 10;
+    /** 服务端下发的「附近 Adyeshach NPC UUID 列表」，用于把 NPC 和真人玩家区分开。 */
+    public static final byte PACKET_NPC_LIST = 11;
 
     private static final String PROTOCOL_VERSION = "1";
 
@@ -94,7 +96,7 @@ public class NetworkHandler {
         messagesRegistered = true;
 
         // 注意上界要跟着最大的包类型走，否则新包注册不上、客户端会直接丢弃
-        for (int type = PACKET_HANDSHAKE; type <= PACKET_NAV_COMMAND; type++) {
+        for (int type = PACKET_HANDSHAKE; type <= PACKET_NPC_LIST; type++) {
             final int packetType = type;
             CHANNEL_IMPL.registerMessage(
                     packetType,
@@ -157,6 +159,9 @@ public class NetworkHandler {
                 break;
             case PACKET_NAV_COMMAND:
                 this.handleNavCommand(client, buf);
+                break;
+            case PACKET_NPC_LIST:
+                this.handleNpcList(client, buf);
                 break;
             default:
                 StarTrailMod.LOGGER.warn("未知数据包类型: 0x{}", Integer.toHexString(packetType & 255));
@@ -427,6 +432,32 @@ public class NetworkHandler {
         return v == Math.floor(v) && !Double.isInfinite(v) ? String.valueOf((long)v) : String.valueOf(v);
     }
 
+    /**
+     * 服务端下发的附近 Adyeshach NPC 列表（包类型 11）。
+     *
+     * <p>只用来区分「这是 NPC 而不是真人」：Adyeshach 的 NPC 是 PLAYER 类型实体，
+     * 客户端地图原本会把它们当其他玩家画头像。收到后整表替换本地集合。
+     */
+    private void handleNpcList(Minecraft client, FriendlyByteBuf buf) {
+        int count = buf.readVarInt();
+        java.util.Set<String> ids = new java.util.HashSet<>();
+        for (int i = 0; i < count; i++) {
+            try {
+                ids.add(buf.readUtf());
+            } catch (Exception e) {
+                StarTrailMod.LOGGER.warn("[NpcRecv] 读取第 {} 个 NPC UUID 失败，跳过: {}", i, e.getMessage());
+                break;
+            }
+        }
+
+        StarTrailMod.LOGGER.debug("[NpcRecv] 收到 {} 个 NPC 标识", ids.size());
+        client.execute(() -> {
+            StarTrailClient startrail = StarTrailClient.getInstance();
+            if (startrail != null && startrail.getNpcStore() != null) {
+                startrail.getNpcStore().replaceAll(ids);
+            }
+        });
+    }
     private MapRegion readRegion(FriendlyByteBuf buf) {
         String id = buf.readUtf();
         String name = buf.readUtf();

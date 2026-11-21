@@ -146,6 +146,8 @@ public class ConfigManager {
       /** 小地图形状: 0=圆形, 1=正方形 */
       public int shape = 0;
       public boolean showPlayers = true;
+      /** 是否在小地图上显示 Adyeshach NPC 头像（默认开）。 */
+      public boolean showNpcs = true;
       public boolean showRegions = true;
       public boolean showRegionNames = true;
       public boolean showPolygons = true;
@@ -197,6 +199,8 @@ public class ConfigManager {
       public boolean showWarps = true;
       /** 大地图是否显示怪物头像（null = 旧配置未写该字段，按默认 true 处理） */
       public Boolean showMobs = Boolean.TRUE;
+      /** 是否在大地图上显示 Adyeshach NPC 头像（默认开）。 */
+      public Boolean showNpcs = Boolean.TRUE;
       public boolean smoothZoom = true;
       public boolean smoothPan = true;
       public int lodUpdateInterval = 10;

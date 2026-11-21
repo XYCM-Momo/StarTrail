@@ -10,3 +10,6 @@ settings:
   # MythicMobs 怪物同步半径（方块）
   # 服务端每 2 秒扫描玩家附近此半径内的 MM 怪物并同步到客户端
   mythic-mob-track-radius: 128
+  # 服务端每 2 秒扫描玩家附近此半径内的 Adyeshach NPC，把其 UUID 同步给客户端
+  # （客户端据此把 NPC 和真人玩家区分开，好让「显示 NPC 头像」开关只影响 NPC）
+  npc-track-radius: 128

@@ -45,6 +45,7 @@ public class StarTrailClient {
     private MythicMobStore mythicMobStore;
     private MobHeadManager mobHeadManager;
     private WaypointStore waypointStore;
+    private com.asterovie.momo.startrail.client.npc.NpcStore npcStore;
     private NavigationManager navigationManager;
 
     /** 服务端握手包下发的「是否允许大地图传送」（仅 OP 为 true），用于决定右键菜单是否显示传送选项。 */
@@ -76,6 +77,7 @@ public class StarTrailClient {
         this.mythicMobStore = new MythicMobStore();
         this.mobHeadManager = new MobHeadManager();
         this.waypointStore = new WaypointStore();
+        this.npcStore = new com.asterovie.momo.startrail.client.npc.NpcStore();
         this.navigationManager = new NavigationManager(this.waypointStore);
         this.waypointStore.reload();
         this.networkHandler = new NetworkHandler(this.regionDataStore, this.polygonRegionStore, this.warpPointStore);
@@ -136,6 +138,9 @@ public class StarTrailClient {
         this.warpPointStore.clear();
         this.mapImageManager.clear();
         this.warpIconManager.clear();
+        if (this.npcStore != null) {
+            this.npcStore.clear();
+        }
         this.mythicMobStore.clear();
         this.mobHeadManager.clear();
         if (this.navigationManager != null) {
@@ -194,6 +199,11 @@ public class StarTrailClient {
 
     public WaypointStore getWaypointStore() {
         return this.waypointStore;
+    }
+
+
+    public com.asterovie.momo.startrail.client.npc.NpcStore getNpcStore() {
+        return this.npcStore;
     }
 
     public NavigationManager getNavigationManager() {

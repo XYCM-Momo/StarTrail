@@ -46,6 +46,7 @@ Bukkit 只给「已注册该通道」的玩家发 `sendPluginMessage`，所以�
 | 8 | 世界切换 WorldChange | S→C | 玩家换维度 | |
 | 9 | MythicMobs 同步 | S→C | 每 2 秒 | 需要服务端装 MythicMobs |
 | 10 | 导航指令 NavCommand | S→C | OP 执行 `/startrail nav` | 需要客户端装模组；v1.1.3 起 |
+| 11 | NPC 列表 NpcList | S→C | 每 2 秒 | Adyeshach NPC 的 UUID；v1.1.13 起 |
 
 ## 4. 各包字段明细
 
@@ -164,6 +165,28 @@ double  y            ← 【v1.1.4 后加】目标 Y；hasY=false 时无意义�
 * `hasY` / `y` 同样是后加字段。客户端按「能读就读，读不到就视为未指定」处理：
   未指定 Y 时按该列 `MOTION_BLOCKING` 最高方块推断——**楼内/洞穴点位必须带 Y**，否则终点会跑到屋顶上方。
 
+### 包 11 · NPC 列表 NpcList
+
+服务端每 2 秒下发一次「玩家附近属于 Adyeshach 的 NPC UUID」，客户端据此把 NPC 和真人玩家区分开。
+
+```
+byte   包类型 = 11
+VarInt 数量 N
+N × string uuid      ← Adyeshach NPC 的 UUID（与客户端实体 UUID 相同）
+```
+
+**为什么需要**：Adyeshach 的 NPC 是 **PLAYER 类型实体**，在客户端看来与真人玩家无异，
+地图原本会把它们当作「其他玩家」画头像。要让「显示 NPC 头像」开关只影响 NPC、不动真人，
+客户端必须先知道哪些 UUID 是 NPC。
+
+**实测确认**（Adyeshach 2.1.35）：NPC 的 `getUniqueId()` 与 `getNormalizeUniqueId()` 完全相同，
+即客户端实体 UUID 就是 NPC 数据文件（`plugins/Adyeshach/npc/<uuid>.json`）里的 UUID。
+
+**同步范围**：`settings.npc-track-radius`（默认 128），只发该半径内的 NPC。
+未安装 Adyeshach 时服务端不发此包，客户端保持空集合（等于全部按真人处理，行为与旧版一致）。
+
+**⚠️ 已知坑**：Adyeshach 的 NPC 数据**绑定世界名**。测试时把测试服世界改名为 `testworld` 后，
+15 个 NPC 一个都没加载，**日志里没有任何提示**——非常隐蔽。换世界名时务必留意。
 ## 5. 已知坑 / 待确认问题（整理时发现）
 
 ### 5.1 世界名两种写法混用（**已解决：矩形系统已删除，v1.9.6**）

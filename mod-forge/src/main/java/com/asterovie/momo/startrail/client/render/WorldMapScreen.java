@@ -449,8 +449,19 @@ public class WorldMapScreen extends Screen {
          int faceSize = Math.max(8, Math.round(8.0F * (float)Math.max(1.0, this.scale / 16.0)));
          faceSize = Math.min(faceSize, 48);
          if (client.level != null) {
+            ConfigManager.ClientConfig pcfg = ConfigManager.getInstance().getConfig();
+            boolean showNpcs = pcfg == null || pcfg.worldmap == null || pcfg.worldmap.showNpcs == null
+               || pcfg.worldmap.showNpcs.booleanValue();
+            com.asterovie.momo.startrail.client.npc.NpcStore npcStore =
+               StarTrailClient.getInstance() != null ? StarTrailClient.getInstance().getNpcStore() : null;
+
             for (AbstractClientPlayer entity : client.level.players()) {
                if (entity instanceof AbstractClientPlayer && entity != client.player) {
+                  // Adyeshach 的 NPC 也是 PLAYER 实体，会混在这里；开关关闭时不画它们
+                  if (!showNpcs && npcStore != null && npcStore.isNpc(entity.getUUID())) {
+                     continue;
+                  }
+
                   float sx = this.worldToScreenX(entity.getX());
                   float sz = this.worldToScreenY(entity.getZ());
                   if (!(sx < (float)(-faceSize))
@@ -1072,12 +1083,16 @@ public class WorldMapScreen extends Screen {
       int labelX = p[0] + 14;
       boolean showPlayers = cfg.worldmap.showPlayers;
       boolean showMobs = cfg.worldmap.showMobs == null || cfg.worldmap.showMobs;
+      boolean showNpcs = cfg.worldmap.showNpcs == null || cfg.worldmap.showNpcs;
       int[] t0 = this.getSettingsToggleRect(0);
       int[] t1 = this.getSettingsToggleRect(1);
+      int[] t2 = this.getSettingsToggleRect(2);
       this.drawSettingsLabel(context, "\u663e\u793a\u73a9\u5bb6\u5934\u50cf", labelX, t0[1] + 4);
       this.drawSettingsButton(context, t0, showPlayers ? "\u5f00" : "\u5173", showPlayers, this.inRect(mouseX, mouseY, t0));
       this.drawSettingsLabel(context, "\u663e\u793a\u602a\u7269\u5934\u50cf", labelX, t1[1] + 4);
       this.drawSettingsButton(context, t1, showMobs ? "\u5f00" : "\u5173", showMobs, this.inRect(mouseX, mouseY, t1));
+      this.drawSettingsLabel(context, "\u663e\u793a NPC \u5934\u50cf", labelX, t2[1] + 4);
+      this.drawSettingsButton(context, t2, showNpcs ? "\u5f00" : "\u5173", showNpcs, this.inRect(mouseX, mouseY, t2));
    }
 
    private void renderMinimapSettings(GuiGraphics context, int mouseX, int mouseY, ConfigManager.ClientConfig cfg) {
@@ -1103,6 +1118,11 @@ public class WorldMapScreen extends Screen {
       int[] s1 = this.getSettingsShapeRect(1);
       this.drawSettingsButton(context, s0, "\u5706\u5f62", cfg.minimap.shape == 0, this.inRect(mouseX, mouseY, s0));
       this.drawSettingsButton(context, s1, "\u6b63\u65b9\u5f62", cfg.minimap.shape == 1, this.inRect(mouseX, mouseY, s1));
+      // 第 6 行：NPC 头像开关（默认开）
+      boolean showNpcs = cfg.minimap.showNpcs;
+      int[] tNpc = this.getSettingsToggleRect(6);
+      this.drawSettingsLabel(context, "\u663e\u793a NPC \u5934\u50cf", labelX, tNpc[1] + 4);
+      this.drawSettingsButton(context, tNpc, showNpcs ? "\u5f00" : "\u5173", showNpcs, this.inRect(mouseX, mouseY, tNpc));
    }
 
    private void handleSettingsClick(double mouseX, double mouseY) {
@@ -1151,6 +1171,14 @@ public class WorldMapScreen extends Screen {
             this.saveSettings();
             return;
          }
+
+         int[] t2 = this.getSettingsToggleRect(2);
+         if (this.inRect(mx, my, t2)) {
+            this.playClickSound();
+            cfg.worldmap.showNpcs = Boolean.valueOf(!(cfg.worldmap.showNpcs == null || cfg.worldmap.showNpcs));
+            this.saveSettings();
+            return;
+         }
       } else {
          int[] posVals = new int[]{1, 0, 2, 3};
          int[][] posRects = this.getSettingsPosRects();
@@ -1192,6 +1220,14 @@ public class WorldMapScreen extends Screen {
          if (this.inRect(mx, my, s1)) {
             this.playClickSound();
             cfg.minimap.shape = 1;
+            this.saveSettings();
+            return;
+         }
+
+         int[] tNpc = this.getSettingsToggleRect(6);
+         if (this.inRect(mx, my, tNpc)) {
+            this.playClickSound();
+            cfg.minimap.showNpcs = !cfg.minimap.showNpcs;
             this.saveSettings();
          }
       }

@@ -250,6 +250,27 @@ public class PacketSender {
       }
    }
 
+   /**
+    * 下发「附近 Adyeshach NPC 的 UUID 列表」（包类型 11）。
+    *
+    * <p>只发 UUID：客户端拿它来区分「这个 PLAYER 实体是 NPC 还是真人」，
+    * 位置与头像客户端本来就从实体本身拿，不需要重复传。
+    */
+   public void sendNpcList(Player player, java.util.List<String> npcIds) {
+      try {
+         PacketSender.PacketBuffer buf = new PacketSender.PacketBuffer();
+         buf.writeByte(11);
+         int n = npcIds == null ? 0 : npcIds.size();
+         buf.writeVarInt(n);
+         for (int i = 0; i < n; i++) {
+            buf.writeString(npcIds.get(i));
+         }
+
+         this.sendPacket(player, buf.toByteArray());
+      } catch (Exception var6) {
+         this.plugin.getLogger().warning("发送 NPC 列表包失败: " + var6.getMessage());
+      }
+   }
    private void sendPacket(Player player, byte[] data) {
       try {
          player.sendPluginMessage(this.plugin, "startrail:main", data);

@@ -318,9 +318,20 @@ public class MinimapRenderer {
       if (client.player != null && client.level != null) {
          double playerX = client.player.getX();
          double playerZ = client.player.getZ();
+         ConfigManager.ClientConfig config = this.getConfig();
+         boolean showNpcs = config == null || config.minimap == null || config.minimap.showNpcs;
+         com.asterovie.momo.startrail.client.npc.NpcStore npcStore =
+            com.asterovie.momo.startrail.client.StarTrailClient.getInstance() != null
+               ? com.asterovie.momo.startrail.client.StarTrailClient.getInstance().getNpcStore()
+               : null;
 
          for (AbstractClientPlayer entity : client.level.players()) {
             if (entity instanceof AbstractClientPlayer && entity != client.player) {
+               // Adyeshach 的 NPC 也是 PLAYER 实体，会混在这里；开关关闭时不画它们
+               if (!showNpcs && npcStore != null && npcStore.isNpc(entity.getUUID())) {
+                  continue;
+               }
+
                double dx = (entity.getX() - playerX) * zoom;
                double dz = (entity.getZ() - playerZ) * zoom;
                double distSq = dx * dx + dz * dz;

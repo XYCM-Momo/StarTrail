@@ -3,6 +3,8 @@ package com.asterovie.momo.startrail.server;
 import com.asterovie.momo.startrail.server.command.StarTrailCommand;
 import com.asterovie.momo.startrail.server.image.MapImageManager;
 import com.asterovie.momo.startrail.server.mythic.MythicMobHook;
+import com.asterovie.momo.startrail.server.npc.AdyeshachHook;
+import com.asterovie.momo.startrail.server.npc.NpcTracker;
 import com.asterovie.momo.startrail.server.mythic.MythicMobTracker;
 import com.asterovie.momo.startrail.server.network.PacketSender;
 import com.asterovie.momo.startrail.server.player.PlayerTracker;
@@ -27,6 +29,8 @@ public class StarTrailPlugin extends JavaPlugin {
    private LanguageManager languageManager;
    private MythicMobHook mythicMobHook;
    private MythicMobTracker mythicMobTracker;
+   private AdyeshachHook adyeshachHook;
+   private NpcTracker npcTracker;
 
    public StarTrailPlugin() {
    }
@@ -59,6 +63,10 @@ public class StarTrailPlugin extends JavaPlugin {
       this.mythicMobHook = new MythicMobHook();
       this.mythicMobTracker = new MythicMobTracker(this, this.mythicMobHook);
       this.mythicMobTracker.start();
+      this.adyeshachHook = new AdyeshachHook();
+      this.npcTracker = new NpcTracker(this, this.adyeshachHook);
+      this.npcTracker.start();
+      this.logger.info("  Adyeshach 集成: " + (this.adyeshachHook.isAvailable() ? "\u5df2\u542f\u7528" : "\u672a\u5b89\u88c5/\u8df3\u8fc7"));
       this.logger.info("  MythicMobs \u96c6\u6210: " + (this.mythicMobHook.isEnabled() ? "\u5df2\u542f\u7528" : "\u672a\u5b89\u88c5/\u8df3\u8fc7"));
       this.logger.info("StarTrail Plugin \u5df2\u6210\u529f\u542f\u7528\uff01");
       this.logger.info("  \u5730\u56fe\u56fe\u7247\u7ed1\u5b9a\u6570\u91cf: " + this.mapImageManager.getImageCount());
