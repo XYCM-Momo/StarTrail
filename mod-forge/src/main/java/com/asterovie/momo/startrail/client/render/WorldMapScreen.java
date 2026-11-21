@@ -138,12 +138,13 @@ public class WorldMapScreen extends Screen {
          this.renderRegionOverlays(context);
          this.renderRegionLabels(context);
          this.renderPolygonOverlays(context);
-         this.renderWarps(context);
+         // 玩家头像先画、传送点后画：传送点要压在玩家头像之上（否则站在点位上时图标被脸盖住）
          ConfigManager.ClientConfig rcfg = ConfigManager.getInstance().getConfig();
          if (rcfg != null && rcfg.worldmap != null && rcfg.worldmap.showPlayers) {
             this.renderPlayerMarker(context);
          }
 
+         this.renderWarps(context);
          this.renderNavPath(context);
          this.renderUIOverlay(context, mouseX, mouseY);
       }
@@ -337,7 +338,8 @@ public class WorldMapScreen extends Screen {
             if (this.intersectsRect(settingsRect, textX - 3, textY - 2, textX + textWidth + 3, textY + 20)) {
                continue;
             }
-            context.fill(textX - 3, textY - 2, textX + textWidth + 3, textY + 9, -1728053248);
+            // 区域名不带黑色底衬：直接压在贴图上，画面更干净。
+            // 命中判定仍按原来的 3px 内边距算，避免「名字已不绘制却仍被判为遮挡」的错位。
             context.drawString(tr, label, textX, textY, 16777215);
             String typeText = region.getType().getDisplayName();
             int typeWidth = tr.width(typeText);
@@ -721,9 +723,91 @@ public class WorldMapScreen extends Screen {
       }
    }
 
+   /**
+    * 传送点详情面板的布局（矩形 + 描述换行结果）。
+    *
+    * <p>面板高度**按内容动态计算**：描述有几行就占几行，不再像以前那样固定 150 高、
+    * 描述区死占 4 行，导致短描述下面空一大块。
+    */
+   private static final class WarpPanelLayout {
+      final int[] rect;
+      final List<String> descrLines;
+
+      WarpPanelLayout(int[] rect, List<String> descrLines) {
+         this.rect = rect;
+         this.descrLines = descrLines;
+      }
+   }
+
+   /** 面板内边距与行高常量，渲染与测量共用，避免两处算得不一样。 */
+   private static final int PANEL_PAD = 8;
+   private static final int PANEL_TITLE_H = 12;
+   private static final int PANEL_LINE_H = 10;
+   private static final int PANEL_COORD_H = 10;
+   private static final int PANEL_BTN_H = 16;
+   private static final int PANEL_BTN_GAP = 3;
+   private static final int PANEL_GAP = 6;
+   private static final int PANEL_MIN_W = 200;
+   private static final int PANEL_MAX_W = 280;
+   private static final int PANEL_MAX_DESCR_LINES = 6;
+
+   /** 按内容算一次布局；没有选中传送点时返回 null。 */
+   private WarpPanelLayout computeWarpPanelLayout() {
+      if (this.selectedWarpId == null) {
+         return null;
+      }
+
+      WarpPoint w = this.findWarpById(this.selectedWarpId);
+      if (w == null) {
+         return null;
+      }
+
+      Font tr = Minecraft.getInstance().font;
+      int maxW = Math.min(PANEL_MAX_W, this.width - 40);
+      int textWidth = maxW - PANEL_PAD * 2;
+
+      // 描述按面板内宽换行；最多显示若干行，超出加省略号
+      String descr = w.getDescr();
+      List<String> lines = new ArrayList<>();
+      if (descr != null && !descr.isEmpty()) {
+         lines = this.wrapText(descr, textWidth, tr);
+         if (lines.size() > PANEL_MAX_DESCR_LINES) {
+            lines = new ArrayList<>(lines.subList(0, PANEL_MAX_DESCR_LINES));
+            String last = lines.get(PANEL_MAX_DESCR_LINES - 1);
+            while (!last.isEmpty() && tr.width(last + "...") > textWidth) {
+               last = last.substring(0, last.length() - 1);
+            }
+            lines.set(PANEL_MAX_DESCR_LINES - 1, last + "...");
+         }
+      }
+
+      // 宽度：至少能放下标题与坐标行，最多 PANEL_MAX_W
+      String title = w.getName();
+      String coordLine = String.format("X: %d  Y: %d  Z: %d", w.getX(), w.getY(), w.getZ());
+      int needW = Math.max(tr.width(title), tr.width(coordLine)) + PANEL_PAD * 2 + 8;
+      int fixedW = Math.max(PANEL_MIN_W, Math.min(maxW, needW));
+
+      // 高度：上内边距 + 标题 + (描述行 + 与坐标的间隔) + 坐标 + 间隔 + 两个按钮 + 下内边距
+      int h = PANEL_PAD + PANEL_TITLE_H;
+      if (!lines.isEmpty()) {
+         h += PANEL_GAP / 2 + lines.size() * PANEL_LINE_H;
+      }
+      h += PANEL_GAP + PANEL_COORD_H + PANEL_GAP + PANEL_BTN_H + PANEL_BTN_GAP + PANEL_BTN_H + PANEL_PAD;
+
+      int x0 = this.width - fixedW - 20;
+      int y0 = this.height / 2 - h / 2;
+      return new WarpPanelLayout(new int[]{x0, y0, x0 + fixedW, y0 + h}, lines);
+   }
+
    private int[] getSelectedPanelRect() {
-      int w = 220;
-      int h = 150;
+      WarpPanelLayout layout = this.computeWarpPanelLayout();
+      if (layout != null) {
+         return layout.rect;
+      }
+
+      // 没选中时给一个占位矩形（调用方会先判 selectedWarpId）
+      int w = PANEL_MIN_W;
+      int h = 100;
       int x0 = this.width - w - 20;
       int y0 = this.height / 2 - h / 2;
       return new int[]{x0, y0, x0 + w, y0 + h};
@@ -783,15 +867,13 @@ public class WorldMapScreen extends Screen {
 
    private int[][] getSelectedPanelButtonRects() {
       int[] p = this.getSelectedPanelRect();
-      int x0 = p[0] + 8;
-      int x1 = p[2] - 8;
-      int bottomMargin = 6;
-      int btnH = 16;
-      int btnGap = 3;
-      int upY0 = p[3] - bottomMargin - btnH - btnGap - btnH;
-      int upY1 = p[3] - bottomMargin - btnH - btnGap;
-      int dnY0 = p[3] - bottomMargin - btnH;
-      int dnY1 = p[3] - bottomMargin;
+      int x0 = p[0] + PANEL_PAD;
+      int x1 = p[2] - PANEL_PAD;
+      int btnH = PANEL_BTN_H;
+      int dnY1 = p[3] - PANEL_PAD;
+      int dnY0 = dnY1 - btnH;
+      int upY1 = dnY0 - PANEL_BTN_GAP;
+      int upY0 = upY1 - btnH;
       return new int[][]{{x0, upY0, x1, upY1}, {x0, dnY0, x1, dnY1}};
    }
 
@@ -1485,9 +1567,14 @@ public class WorldMapScreen extends Screen {
          if (w == null) {
             this.selectedWarpId = null;
          } else {
+            WarpPanelLayout layout = this.computeWarpPanelLayout();
+            if (layout == null) {
+               return;
+            }
+
             Minecraft client = Minecraft.getInstance();
             Font tr = client.font;
-            int[] rect = this.getSelectedPanelRect();
+            int[] rect = layout.rect;
             int x0 = rect[0];
             int y0 = rect[1];
             int x1 = rect[2];
@@ -1495,36 +1582,25 @@ public class WorldMapScreen extends Screen {
             // 与右键选项栏统一：半透明深蓝底 + 霓虹青细边框
             context.fill(x0, y0, x1, y1, -871689696);
             this.drawPanelBorder(context, x0, y0, x1, y1, -16721665, 1);
-            String title = w.getName();
-            context.drawString(tr, title, x0 + 8, y0 + 6, -6559489);
-            String descr = w.getDescr();
-            int descrMaxWidth = x1 - x0 - 16;
-            int descrY = y0 + 18;
-            int lineH = 10;
-            int maxDescrLines = 4;
-            if (descr != null && !descr.isEmpty()) {
-               List<String> lines = this.wrapText(descr, descrMaxWidth, tr);
-               if (lines.size() > maxDescrLines) {
-                  lines = lines.subList(0, maxDescrLines);
-                  String last = lines.get(maxDescrLines - 1);
 
-                  while (!last.isEmpty() && tr.width(last + "...") > descrMaxWidth) {
-                     last = last.substring(0, last.length() - 1);
-                  }
+            int cursorY = y0 + PANEL_PAD;
+            context.drawString(tr, w.getName(), x0 + PANEL_PAD, cursorY, -6559489);
+            cursorY += PANEL_TITLE_H;
 
-                  lines.set(maxDescrLines - 1, last + "...");
-               }
-
-               for (int i = 0; i < lines.size(); i++) {
-                  context.drawString(tr, lines.get(i), x0 + 8, descrY + i * lineH, -7358516);
+            // 描述：有几行画几行，面板高度已按行数算好（不再留固定空白）
+            if (!layout.descrLines.isEmpty()) {
+               cursorY += PANEL_GAP / 2;
+               for (String line : layout.descrLines) {
+                  context.drawString(tr, line, x0 + PANEL_PAD, cursorY, -7358516);
+                  cursorY += PANEL_LINE_H;
                }
             }
 
+            cursorY += PANEL_GAP;
             String coordLine = String.format("X: %d  Y: %d  Z: %d", w.getX(), w.getY(), w.getZ());
-            int[][] btnRects = this.getSelectedPanelButtonRects();
-            int coordY = btnRects[0][1] - 11;
-            context.drawString(tr, coordLine, x0 + 8, coordY, -9456679);
+            context.drawString(tr, coordLine, x0 + PANEL_PAD, cursorY, -9456679);
 
+            int[][] btnRects = this.getSelectedPanelButtonRects();
             for (int i = 0; i < 2; i++) {
                int bx0 = btnRects[i][0];
                int by0 = btnRects[i][1];

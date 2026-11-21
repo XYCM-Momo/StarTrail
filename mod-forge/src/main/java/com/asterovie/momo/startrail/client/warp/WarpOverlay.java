@@ -62,6 +62,13 @@ public final class WarpOverlay {
       );
    }
 
+   /**
+    * 绘制传送点图标。
+    *
+    * <p><b>注意</b>：自 1.1.11 起传送点**只画图标、不画名称**，
+    * 所以 textRenderer / labelAbove / panelX0..panelY1 / hideRect
+    * 已不再参与绘制（保留签名以兼容现有调用点）。名称改由选中后的详情面板承担。
+    */
    public static void render(
       String world,
       WarpPointStore store,
@@ -133,38 +140,9 @@ public final class WarpOverlay {
                   drawFallbackDot(ctx, sx, sy, iconSize, isSelected ? -256 : -65536);
                }
 
-               if (textRenderer != null) {
-                  String text = w.getName();
-                  int textW = textRenderer.width(text);
-                  int textX = (int)sx - textW / 2;
-                  int textY;
-                  if (labelAbove) {
-                     textY = (int)sy - iconSize / 2 - 10;
-                  } else {
-                     textY = (int)sy + iconSize / 2 + 2;
-                  }
-
-                  if (clipEnabled) {
-                     int dy = textY - clipCy;
-                     if (Math.abs(dy) > clipR) {
-                        continue;
-                     }
-                  }
-
-                  int textCx = textX + textW / 2;
-                  int textCy = textY + 4;
-                  if (hideRect != null
-                     && textCx >= hideRect[0]
-                     && textCx <= hideRect[2]
-                     && textCy >= hideRect[1]
-                     && textCy <= hideRect[3]) {
-                     continue; // 名字落在遮挡区内（如右键菜单范围）时不画
-                  }
-                  if (panelX0 < 0 || textCx < panelX0 || textCx > panelX1 || textCy < panelY0 || textCy > panelY1) {
-                     ctx.fill(textX - 1, textY - 1, textX + textW + 1, textY + 9, Integer.MIN_VALUE);
-                     ctx.drawString(textRenderer, text, textX, textY, -1);
-                  }
-               }
+               // 传送点名称不再绘制：大小地图都只显示图标。
+               // 名字改由「选中后的详情面板」和悬停提示承担，地图上更干净、不会互相压字。
+               // （原实现在此处按 labelAbove 计算文字位置并画底衬 + 名字，已移除。）
             }
          }
       }

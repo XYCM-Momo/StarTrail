@@ -131,27 +131,6 @@ public class MinimapRenderer {
             );
          }
 
-         if (config.minimap.showWarps && client.player != null && client.level != null) {
-            int baseIconSize = 8;
-            WarpOverlay.renderMinimap(
-               worldKey,
-               this.warpPointStore,
-               this.warpIconManager,
-               playerX,
-               playerZ,
-               centerX,
-               centerY,
-               this.zoom,
-               drawContext,
-               client.font,
-               centerX,
-               centerY,
-               radius,
-               baseIconSize,
-               null
-            );
-         }
-
          if (client.player != null && client.level != null) {
             MythicMobStore mobStore = StarTrailClient.getInstance().getMythicMobStore();
             MobHeadManager headMgr = StarTrailClient.getInstance().getMobHeadManager();
@@ -188,13 +167,35 @@ public class MinimapRenderer {
             this.renderYawCone(matrices, centerX, centerY, radius, faceSize, yaw, (float)fov);
          }
 
-         // 其他玩家头像与导航路径先画，自己的头像最后画，
-         // 否则有别的玩家/路线经过小地图中心时，自己的头像会被压在下面看不见。
+         // 其他玩家头像与导航路径先画、自己的头像随后，保证自己的脸不被别人挡住；
+         // 传送点最后画——它要压在玩家头像之上，否则站在点位上时图标会被脸盖住。
          this.renderOtherPlayerFaces(drawContext, client, centerX, centerY, radius, this.zoom, faceSize);
          this.renderNavPath(drawContext, centerX, centerY, playerX, playerZ);
          if (client.player != null) {
             this.renderPlayerFace(drawContext, client, centerX, centerY, faceSize);
          }
+
+         if (config.minimap.showWarps && client.player != null && client.level != null) {
+            int baseIconSize = 8;
+            WarpOverlay.renderMinimap(
+               worldKey,
+               this.warpPointStore,
+               this.warpIconManager,
+               playerX,
+               playerZ,
+               centerX,
+               centerY,
+               this.zoom,
+               drawContext,
+               client.font,
+               centerX,
+               centerY,
+               radius,
+               baseIconSize,
+               null
+            );
+         }
+
          if (square) {
             int bc = -16721665;
             drawContext.fill(mapX - 1, mapY - 1, mapX + this.mapSize + 1, mapY, bc);
@@ -206,13 +207,14 @@ public class MinimapRenderer {
          }
          matrices.popPose();
          if (client.player != null) {
-            String coords = String.format("X: %.1f  Z: %.1f", client.player.getX(), client.player.getZ());
+            String coords = String.format("X: %.1f  Y: %.1f  Z: %.1f", client.player.getX(), client.player.getY(), client.player.getZ());
             Font tr = client.font;
             int textWidth = tr.width(coords);
             int textX = centerX - textWidth / 2;
             int textY = mapY + this.mapSize + 4;
             drawContext.fill(textX - 3, textY - 2, textX + textWidth + 3, textY + 9, Integer.MIN_VALUE);
-            drawContext.drawString(tr, coords, textX, textY, 16776960);
+            // 白色文字（原来是黄色 16776960），与界面上其它信息文字保持一致
+            drawContext.drawString(tr, coords, textX, textY, 16777215);
          }
 
          if (config.minimap.showRegionNames) {
