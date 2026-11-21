@@ -49,6 +49,13 @@ public class WorldMapScreen extends Screen {
    private boolean followPlayer = true;
    private double scale = 1.0;
    private double targetScale = 16.0;
+   /**
+    * 滚轮缩放的「锚点」：滚轮时鼠标所指的世界坐标。
+    *
+    * <p>平滑缩放要在若干帧里才过渡到目标比例，这期间必须**每帧围绕这个锚点重新定位相机**，
+    * 否则鼠标下的位置会随缩放漂移。为 null 表示当前没有进行中的缩放。
+    */
+   private double[] zoomAnchor = null;
    private boolean isDragging = false;
    private double lastMouseX;
    private double lastMouseY;
@@ -57,6 +64,14 @@ public class WorldMapScreen extends Screen {
    private int renderedRegions = 0;
    private String selectedWarpId = null;
    private static final double DRAG_THRESHOLD_PX = 4.0;
+   /**
+    * 滚轮缩放的平滑系数：每帧把当前比例向目标比例靠拢这么多（0~1）。
+    *
+    * <p>取 0.35：单次滚轮的缩放幅度是 20%，旧实现一步跳完；
+    * 现在首帧只走 7%（约 1/3），约 11 帧即 0.18 秒到位。
+    * 再小（如 0.25）会拖到 0.28 秒、连滚时发滞；再大（0.45+）跳变感又开始明显。
+    */
+   private static final double ZOOM_SMOOTHING = 0.35;
    private boolean pendingClick = false;
    private double pressDownX;
    private double pressDownY;
@@ -124,7 +139,21 @@ public class WorldMapScreen extends Screen {
          context.fill(0, 0, this.width, this.height, -15921894);
       }
 
-      this.scale = this.scale + (this.targetScale - this.scale) * 0.15;
+      // 缩放的平滑过渡：scale 每帧向 targetScale 靠近，而不是一次性跳到位。
+      // 已经有这块缓动，之前只是被滚轮处理里的「scale = targetScale」抵消掉了。
+      this.scale = this.scale + (this.targetScale - this.scale) * ZOOM_SMOOTHING;
+      if (Math.abs(this.targetScale - this.scale) < 1.0E-4) {
+         this.scale = this.targetScale;
+         // 缩放已到位，清掉锚点：否则之后拖动地图时相机会被锚点一直拉回去
+         this.zoomAnchor = null;
+      }
+
+      // 平滑缩放期间围绕鼠标锚点重定位相机，保证「鼠标指着的地方」不漂移。
+      if (this.zoomAnchor != null) {
+         this.cameraX = this.zoomAnchor[0] - (this.zoomAnchor[2] - (double)this.width / 2.0) / this.scale;
+         this.cameraZ = this.zoomAnchor[1] - (this.zoomAnchor[3] - (double)this.height / 2.0) / this.scale;
+      }
+
       if (this.followPlayer) {
          Minecraft client = Minecraft.getInstance();
          if (client.player != null) {
@@ -605,6 +634,8 @@ public class WorldMapScreen extends Screen {
 
             this.followPlayer = false;
             this.isDragging = true;
+            // 开始拖动就放弃缩放锚点，否则锚点会把相机拽回鼠标位置，拖不动
+            this.zoomAnchor = null;
             this.cameraX = this.cameraX - deltaX / this.scale;
             this.cameraZ = this.cameraZ - deltaY / this.scale;
             return true;
@@ -1494,13 +1525,31 @@ public class WorldMapScreen extends Screen {
          return true;
       }
 
-      double worldX = this.screenToWorldX(mouseX);
-      double worldZ = this.screenToWorldY(mouseY);
       double zoomFactor = amount > 0.0 ? 1.2 : 0.8333333333333334;
-      this.targetScale = Mth.clamp(this.targetScale * zoomFactor, 0.0625, 16.0);
-      this.scale = this.targetScale;
-      this.cameraX = worldX - (mouseX - (double)this.width / 2.0) / this.scale;
-      this.cameraZ = worldZ - (mouseY - (double)this.height / 2.0) / this.scale;
+      double newTarget = Mth.clamp(this.targetScale * zoomFactor, 0.0625, 16.0);
+
+      ConfigManager.ClientConfig cfg = ConfigManager.getInstance().getConfig();
+      boolean smooth = cfg == null || cfg.worldmap == null || cfg.worldmap.smoothZoom;
+
+      if (smooth) {
+         // 平滑模式：只更新目标值，由渲染循环逐帧过渡（不再直接把 scale 拽过去）。
+         // 记录鼠标锚点，过渡期间围绕它重定位相机，鼠标下的位置才不会漂。
+         // 跟随玩家时相机由玩家位置决定，此时不设锚点（等价于以玩家为中心缩放）。
+         this.zoomAnchor = this.followPlayer
+            ? null
+            : new double[]{this.screenToWorldX(mouseX), this.screenToWorldY(mouseY), mouseX, mouseY};
+         this.targetScale = newTarget;
+      } else {
+         // 瞬切模式（配置里关掉平滑时）：立刻到位，行为与旧版一致
+         this.zoomAnchor = null;
+         double worldX = this.screenToWorldX(mouseX);
+         double worldZ = this.screenToWorldY(mouseY);
+         this.targetScale = newTarget;
+         this.scale = this.targetScale;
+         this.cameraX = worldX - (mouseX - (double)this.width / 2.0) / this.scale;
+         this.cameraZ = worldZ - (mouseY - (double)this.height / 2.0) / this.scale;
+      }
+
       return true;
    }
 
