@@ -294,9 +294,31 @@ public class WorldMapScreen extends Screen {
       }
    }
 
+   /**
+    * 区域名是否应该显示：与传送点图标**互补**，共用 ``worldmap.warpIconHideThreshold``。
+    *
+    * <p>该阈值的语义是「缩放小于它就不画传送点图标」（见 WarpOverlay），
+    * 所以这里取反——**图标看不见的时候才用区域名代替**，两者不会同时出现。
+    * 缩放足够大时图标本身就能表达位置，区域名让位，避免和图标叠在一起。
+    */
+   private boolean shouldShowRegionLabels() {
+      ConfigManager.ClientConfig cfg = ConfigManager.getInstance().getConfig();
+      if (cfg == null || cfg.worldmap == null) {
+         return true;
+      }
+
+      return this.scale < cfg.worldmap.warpIconHideThreshold;
+   }
    private void renderRegionLabels(GuiGraphics context) {
       Minecraft client = Minecraft.getInstance();
       Collection<MapRegion> regions = this.regionDataStore.getAllRegions();
+      // 区域名与传送点图标**互补**显示，共用同一个阈值（settings 里的 warp-icon-hide-threshold）：
+      //   缩放 < 阈值 → 传送点图标隐藏，此时用区域名标明位置；
+      //   缩放 ≥ 阈值 → 传送点图标可见（图标本身带含义），区域名不再画，避免与图标叠字。
+      if (!this.shouldShowRegionLabels()) {
+         return;
+      }
+
       int[] panelRect = null;
       if (this.selectedWarpId != null) {
          panelRect = this.getSelectedPanelRect();
@@ -374,11 +396,13 @@ public class WorldMapScreen extends Screen {
                   panelRect[0],
                   panelRect[1],
                   panelRect[2],
-                  panelRect[3]
+                  panelRect[3],
+                  this.shouldShowRegionLabels()
                );
             } else {
                PolygonOverlay.render(
-                  world, this.polygonRegionStore, this.cameraX, this.cameraZ, this.width / 2, this.height / 2, this.scale, context, client.font, 1.0F
+                  world, this.polygonRegionStore, this.cameraX, this.cameraZ, this.width / 2, this.height / 2, this.scale,
+                  context, client.font, 1.0F, false, 0, 0, 0, -1, -1, -1, -1, this.shouldShowRegionLabels()
                );
             }
          }

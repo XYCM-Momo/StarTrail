@@ -217,9 +217,8 @@ public class MinimapRenderer {
             drawContext.drawString(tr, coords, textX, textY, 16777215);
          }
 
-         if (config.minimap.showRegionNames) {
-            this.renderRegionName(drawContext, client, centerX, mapY - 12);
-         }
+         // 小地图不再显示当前区域名：界面上已经有坐标与标点，名字反而挤占视线。
+         // 区域信息交给大地图显示（见 WorldMapScreen.renderRegionLabels）。
 
          RenderSystem.disableBlend();
          RenderSystem.setShader(GameRenderer::getPositionColorShader);
@@ -358,22 +357,6 @@ public class MinimapRenderer {
          float rightY = (float)centerY + (float)(Math.cos((double)yaw - 2.6) * (double)size * 0.7);
          this.drawTriangle(matrices, tipX, tipY, leftX, leftY, rightX, rightY, -1);
          this.drawTriangleOutline(matrices, tipX, tipY, leftX, leftY, rightX, rightY, -16777216);
-      }
-   }
-
-   private void renderRegionName(GuiGraphics drawContext, Minecraft client, int centerX, int y) {
-      if (client.player != null && client.level != null) {
-         String world = client.level.dimension().location().toString();
-         List<MapRegion> regions = this.regionDataStore.getRegionsAt2D(world, (int)client.player.getX(), (int)client.player.getZ());
-         if (!regions.isEmpty()) {
-            MapRegion region = regions.get(0);
-            String name = region.getName();
-            Font tr = client.font;
-            int textWidth = tr.width(name);
-            int textX = centerX - textWidth / 2;
-            // 与大图一致：区域名不带黑色底衬，也不画文字投影
-            drawContext.drawString(tr, name, textX, y, 16777215, false);
-         }
       }
    }
 

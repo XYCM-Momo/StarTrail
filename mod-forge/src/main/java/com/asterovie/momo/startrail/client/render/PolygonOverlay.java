@@ -59,6 +59,37 @@ public final class PolygonOverlay {
       int panelX1,
       int panelY1
    ) {
+      render(world, store, camX, camZ, originX, originY, scale, drawContext, textRenderer, labelScale,
+         clipEnabled, clipCx, clipCy, clipR, panelX0, panelY0, panelX1, panelY1, true);
+   }
+
+   /**
+    * 完整重载，多了 {@code showLabels} 开关。
+    *
+    * <p>大地图用它和传送点图标做**互补**：缩放小于阈值时传送点图标隐藏，这时才画区域名；
+    * 图标可见时传 false，避免名字压在图标上。
+    */
+   public static void render(
+      String world,
+      PolygonRegionStore store,
+      double camX,
+      double camZ,
+      int originX,
+      int originY,
+      double scale,
+      GuiGraphics drawContext,
+      Font textRenderer,
+      float labelScale,
+      boolean clipEnabled,
+      int clipCx,
+      int clipCy,
+      int clipR,
+      int panelX0,
+      int panelY0,
+      int panelX1,
+      int panelY1,
+      boolean showLabels
+   ) {
       if (store != null) {
          List<PolygonRegion> regions = store.getForWorld(world);
          Font useRenderer = textRenderer != null ? textRenderer : Minecraft.getInstance().font;
@@ -70,6 +101,10 @@ public final class PolygonOverlay {
          }
 
          drawAllPolygonLines(drawContext, regions, camX, camZ, originX, originY, scale, clipEnabled, clipCx, clipCy, clipR);
+
+         if (!showLabels) {
+            return;
+         }
 
          for (PolygonRegion rx : regions) {
             if (rx.getVertices() != null && rx.getVertices().size() >= 3) {
