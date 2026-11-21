@@ -7,10 +7,15 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 
 public final class WarpOverlay {
-   /** 选中圈主色：与面板边框 / 导航路径同色（#00D8FF）。 */
-   private static final int SELECTED_RING_COLOR = -16721665;
-   /** 选中圈外描边色：深蓝黑，用来在明亮贴图上压出轮廓（不透明）。 */
-   private static final int SELECTED_RING_OUTLINE_COLOR = -15658724;
+   /**
+    * 选中效果的阴影色：深蓝黑（与面板底色同系），靠**透明度**做出渐隐。
+    *
+    * <p>1.1.17 试过"青色环 + 深色描边"的双色环，观感像轮胎、反而更丑（使用者反馈），
+    * 这里改回单色思路：不描边，只在图标外缘铺一圈由深到透明的圆形阴影。
+    */
+   private static final int SELECTED_SHADOW_RGB = 0x0A1018;
+   /** 阴影最内圈的 alpha（0~255）：紧贴图标处最深。 */
+   private static final int SELECTED_SHADOW_ALPHA_INNER = 150;
    private static long lastDbgMs = 0L;
    private static double lastDbgCamX = 0.0;
    private static double lastDbgCamZ = 0.0;
@@ -266,77 +271,55 @@ public final class WarpOverlay {
    }
 
    /**
-    * 给选中的传送点画一个圆环标记。
+    * 选中传送点的标记：在图标外围铺一圈**径向渐隐的圆形阴影**。
     *
-    * <p>为了在**明亮的地图贴图**上也一眼可见，做了三件事（1.1.16 的细线在 1600% 缩放下
-    * 几乎融进背景，80% 时圈又比图标还小）：
-    * <ol>
-    *   <li><b>线宽随图标缩放</b>：从 2px 起，图标越大线越粗（上限 8px），
-    *       不再是任何缩放下都只有 1px；</li>
-    *   <li><b>留白随图标缩放</b>：圈与图标之间留出与图标成比例的间隙，
-    *       看起来是「外圈标记」而不是图标自带的花纹；</li>
-    *   <li><b>双色环</b>：青色环外再包一圈深色描边，亮底暗底都能看清轮廓。</li>
-    * </ol>
+    * <p>设计思路：不描边、不画环，而是在图标下方"压"一个由深到透明的圆形阴影，
+    * 像这块被照亮/托起来一样——选中感明显但不抢眼，也不会像双色环那样显得笨重。
     *
-    * <p>逐行计算弦宽再填充，比逐点采样更圆、不断点；上下边界按**行中心**对称取整。
+    * <p>做法：从图标外缘到外扩半径，用若干个同心圆环带依次填充，
+    * 每层的 alpha 由 {@code SELECTED_SHADOW_ALPHA_INNER} 线性衰减到 0，
+    * 得到平滑的渐隐过渡（GuiGraphics.fill 不支持渐变，只能分层近似）。
+    * 半径与层数都随图标大小自适应，任何缩放下比例一致。
     */
    private static void drawSelectedRing(GuiGraphics ctx, float centerX, float centerY, int iconSize) {
-      // 图标半径；线宽与留白都按它成比例，保证小图标不糊、大图标不细
       double iconR = (double)Math.max(4, iconSize) / 2.0;
-      int lineW = (int)Math.round(Math.max(2.0, Math.min(8.0, iconR * 0.18)));
-      double gap = Math.max(3.0, iconR * 0.22);
+      // 阴影**从图标外缘开始**，不覆盖图标本身（否则会把图标压暗、看着发脏）。
+      // 留一点内缩，让阴影和图标衔接得自然些。
+      double innerR = iconR * 0.95;
+      // 阴影外扩范围：与图标成比例，图标越大晕得越开
+      double outerR = iconR + Math.max(6.0, iconR * 0.7);
 
-      double outerR = iconR + gap + (double)lineW;
       int cx = Math.round(centerX);
       int cy = Math.round(centerY);
 
-      // 先画外圈深色描边（比青环再粗 1px），形成明显的双色轮廓
-      drawRingBand(ctx, cx, cy, outerR, (double)(lineW + 1), SELECTED_RING_OUTLINE_COLOR);
-      // 再画青色主环
-      drawRingBand(ctx, cx, cy, iconR + gap + (double)lineW / 2.0, (double)lineW, SELECTED_RING_COLOR);
-   }
-
-   /**
-    * 画一条指定线宽的圆环带。
-    *
-    * @param midRadius 环带中心线的半径
-    * @param width     环带宽度（像素）
-    */
-   private static void drawRingBand(GuiGraphics ctx, int cx, int cy, double midRadius, double width, int color) {
-      double half = Math.max(0.5, width / 2.0);
-      double rOuter = midRadius + half;
-      double rInner = Math.max(0.0, midRadius - half);
-      int rows = (int)Math.ceil(rOuter);
-      int top = cy - rows;
-      int bottom = cy + rows;
-
-      for (int y = top; y <= bottom; y++) {
-         double dy = (double)y + 0.5 - (double)cy;
-         double outSq = rOuter * rOuter - dy * dy;
-         if (outSq < 0.0) {
+      // 层数随半径增长，保证大图标下过渡也细腻（不至于出现明显色阶）
+      int layers = (int)Math.max(6, Math.min(28, Math.round(outerR / 3.0)));
+      for (int i = layers - 1; i >= 0; i--) {
+         // i=layers-1 是最外层（最淡），i=0 是最内层（最深）；倒序绘制让内层覆盖外层
+         double t = (double)i / (double)Math.max(1, layers - 1); // 0=内 1=外
+         double r = innerR + (outerR - innerR) * t;
+         int alpha = (int)Math.round((double)SELECTED_SHADOW_ALPHA_INNER * (1.0 - t));
+         if (alpha <= 0) {
             continue;
          }
 
-         int xOut = (int)Math.ceil(Math.sqrt(outSq));
-         int xIn = 0;
-         double inSq = rInner * rInner - dy * dy;
-         if (inSq > 0.0) {
-            xIn = (int)Math.floor(Math.sqrt(inSq));
+         int color = (alpha << 24) | SELECTED_SHADOW_RGB;
+         fillDisc(ctx, cx, cy, r, color);
+      }
+   }
+
+   /** 填充一个实心圆（逐行算弦宽），用于叠加出渐变阴影。 */
+   private static void fillDisc(GuiGraphics ctx, int cx, int cy, double r, int color) {
+      int rows = (int)Math.ceil(r);
+      for (int y = cy - rows; y <= cy + rows; y++) {
+         double dy = (double)y + 0.5 - (double)cy;
+         double sq = r * r - dy * dy;
+         if (sq < 0.0) {
+            continue;
          }
 
-         // 左侧环带
-         int lx0 = cx - xOut;
-         int lx1 = cx - xIn;
-         if (lx1 > lx0) {
-            ctx.fill(lx0, y, lx1, y + 1, color);
-         }
-
-         // 右侧环带
-         int rx0 = cx + xIn;
-         int rx1 = cx + xOut;
-         if (rx1 > rx0) {
-            ctx.fill(rx0, y, rx1 + 1, y + 1, color);
-         }
+         int half = (int)Math.ceil(Math.sqrt(sq));
+         ctx.fill(cx - half, y, cx + half, y + 1, color);
       }
    }
 
