@@ -338,13 +338,12 @@ public class WorldMapScreen extends Screen {
             if (this.intersectsRect(settingsRect, textX - 3, textY - 2, textX + textWidth + 3, textY + 20)) {
                continue;
             }
-            // 区域名不带黑色底衬：直接压在贴图上，画面更干净。
-            // 命中判定仍按原来的 3px 内边距算，避免「名字已不绘制却仍被判为遮挡」的错位。
-            context.drawString(tr, label, textX, textY, 16777215);
+            // 区域名不带黑色底衬，也不画文字投影（drawString 整型重载默认会画阴影）
+            context.drawString(tr, label, textX, textY, 16777215, false);
             String typeText = region.getType().getDisplayName();
             int typeWidth = tr.width(typeText);
             int typeX = (int)screenX - typeWidth / 2;
-            context.drawString(tr, typeText, typeX, textY + 11, region.getBorderColor());
+            context.drawString(tr, typeText, typeX, textY + 11, region.getBorderColor(), false);
          }
       }
    }

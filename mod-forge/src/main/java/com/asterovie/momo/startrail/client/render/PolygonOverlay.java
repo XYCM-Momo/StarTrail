@@ -258,8 +258,8 @@ public final class PolygonOverlay {
          int w = textRenderer.width(text);
          int textX = sx - w / 2;
          int textY = sy - 4;
-         ctx.fill(textX - 1, textY - 1, textX + w + 1, textY + 9, Integer.MIN_VALUE);
-         ctx.drawString(textRenderer, text, textX, textY, -1);
+         // 与矩形区域名保持一致：不带黑色底衬，也不画文字投影
+         ctx.drawString(textRenderer, text, textX, textY, -1, false);
       }
    }
 

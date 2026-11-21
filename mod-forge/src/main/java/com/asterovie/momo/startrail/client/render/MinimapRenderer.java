@@ -360,8 +360,8 @@ public class MinimapRenderer {
             Font tr = client.font;
             int textWidth = tr.width(name);
             int textX = centerX - textWidth / 2;
-            drawContext.fill(textX - 3, y - 2, textX + textWidth + 3, y + 9, Integer.MIN_VALUE);
-            drawContext.drawString(tr, name, textX, y, 16777215);
+            // 与大图一致：区域名不带黑色底衬，也不画文字投影
+            drawContext.drawString(tr, name, textX, y, 16777215, false);
          }
       }
    }
