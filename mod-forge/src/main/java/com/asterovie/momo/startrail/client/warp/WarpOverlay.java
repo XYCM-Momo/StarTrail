@@ -7,6 +7,10 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 
 public final class WarpOverlay {
+   /** 选中圈颜色：与面板边框 / 导航路径同色（#00D8FF），保持整体配色一致。 */
+   private static final int SELECTED_RING_COLOR = -16721665;
+   /** 选中圈的绘制半径在图标半径基础上的额外留白（像素）。 */
+   private static final int SELECTED_RING_PAD = 3;
    private static long lastDbgMs = 0L;
    private static double lastDbgCamX = 0.0;
    private static double lastDbgCamZ = 0.0;
@@ -140,6 +144,11 @@ public final class WarpOverlay {
                   drawFallbackDot(ctx, sx, sy, iconSize, isSelected ? -256 : -65536);
                }
 
+               // 选中的传送点在图标外围套一个圈，一眼能看出"当前选的是这个"
+               if (isSelected) {
+                  drawSelectedRing(ctx, sx, sy, iconSize);
+               }
+
                // 传送点名称不再绘制：大小地图都只显示图标。
                // 名字改由「选中后的详情面板」和悬停提示承担，地图上更干净、不会互相压字。
                // （原实现在此处按 labelAbove 计算文字位置并画底衬 + 名字，已移除。）
@@ -254,6 +263,39 @@ public final class WarpOverlay {
       int x = (int)(centerX - (float)(iconSize / 2));
       int y = (int)(centerY - (float)(iconSize / 2));
       ctx.fill(x, y, x + iconSize, y + iconSize, color);
+   }
+
+   /**
+    * 给选中的传送点画一个空心圆环。
+    *
+    * <p>逐行计算水平弦宽再填充，比逐点采样更圆、也不会出现断点。
+    * 半径随图标大小自适应（图标越大圈越大），保证任何缩放下都能包住图标。
+    *
+    * <p>上下边界按**行中心**对称取整（以圆心所在行为基准向外扩 r 行），
+    * 这样圆的上下对称、不会出现底部多出一行的情况。
+    */
+   private static void drawSelectedRing(GuiGraphics ctx, float centerX, float centerY, int iconSize) {
+      double r = (double)Math.max(4, iconSize) / 2.0 + (double)SELECTED_RING_PAD;
+      int cx = Math.round(centerX);
+      int cy = Math.round(centerY);
+      int rows = (int)Math.ceil(r);
+      int top = cy - rows;
+      int bottom = cy + rows;
+
+      for (int y = top; y <= bottom; y++) {
+         // 该行中心到圆心的垂直距离，求弦半宽
+         double dy = (double)y + 0.5 - (double)cy;
+         double inside = r * r - dy * dy;
+         if (inside < 0.0) {
+            continue;
+         }
+
+         double half = Math.sqrt(inside);
+         int x1 = (int)Math.floor((double)cx - half);
+         int x2 = (int)Math.ceil((double)cx + half);
+         ctx.fill(x1, y, x1 + 1, y + 1, SELECTED_RING_COLOR);
+         ctx.fill(x2, y, x2 + 1, y + 1, SELECTED_RING_COLOR);
+      }
    }
 
    private static void throttledDbg(WarpPoint w, WarpIconTexture tex, float sx, float sy, int iconSize, boolean clip, double scale, boolean selected) {

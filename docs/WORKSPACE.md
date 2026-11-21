@@ -18,7 +18,7 @@ StarTrail/
 │
 ├─ dist/                      ★ 成品区：要拿到游戏里用的 jar 都从这里取
 │  ├─ client-mod/
-│  │  ├─ startrail-forge-1.1.15.jar     Forge 客户端模组（MC 1.20.1 / Forge 47.x）★ 当前在用
+│  │  ├─ startrail-forge-1.1.16.jar     Forge 客户端模组（MC 1.20.1 / Forge 47.x）★ 当前在用
 │  │  └─ mmap-fabric-1.9.5.jar         Fabric 客户端模组（上游原版，未改动、不参与改名）
 │  ├─ server-plugin/
 │  │  └─ StarTrail-Plugin-1.0.4.jar    服务端 Paper 插件
@@ -46,7 +46,8 @@ StarTrail/
 │  ├─ mod-1.1.12_plugin-1.0.3/        ← 区域名彻底去阴影（只换客户端）
 │  ├─ mod-1.1.13_plugin-1.0.4/        ← NPC 头像开关（两端都换）
 │  ├─ mod-1.1.14_plugin-1.0.4/        ← 区域名与传送点互补显示（只换客户端）
-│  └─ mod-1.1.15_plugin-1.0.4/        ← 滚轮缩放平滑（只换客户端）
+│  ├─ mod-1.1.15_plugin-1.0.4/        ← 滚轮缩放平滑（只换客户端）
+│  └─ mod-1.1.16_plugin-1.0.4/        ← 选中传送点加圆圈（只换客户端）
 │
 ├─ mod-forge/                 ★ Forge 模组工程（Gradle，可直接编译改代码）
 │  ├─ gradlew.bat             自带 Gradle Wrapper 8.1.1
