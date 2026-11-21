@@ -14,8 +14,8 @@ public final class WarpOverlay {
     * 这里改回单色思路：不描边，只在图标外缘铺一圈由深到透明的圆形阴影。
     */
    private static final int SELECTED_SHADOW_RGB = 0x0A1018;
-   /** 阴影最内圈的 alpha（0~255）：紧贴图标处最深。 */
-   private static final int SELECTED_SHADOW_ALPHA_INNER = 150;
+   /** 阴影最内圈的 alpha（0~255）：紧贴图标处最深，向外衰减到 0。 */
+   private static final int SELECTED_SHADOW_ALPHA_INNER = 110;
    private static long lastDbgMs = 0L;
    private static double lastDbgCamX = 0.0;
    private static double lastDbgCamZ = 0.0;
@@ -283,19 +283,19 @@ public final class WarpOverlay {
     */
    private static void drawSelectedRing(GuiGraphics ctx, float centerX, float centerY, int iconSize) {
       double iconR = (double)Math.max(4, iconSize) / 2.0;
-      // 阴影**从图标外缘开始**，不覆盖图标本身（否则会把图标压暗、看着发脏）。
-      // 留一点内缩，让阴影和图标衔接得自然些。
-      double innerR = iconR * 0.95;
-      // 阴影外扩范围：与图标成比例，图标越大晕得越开
-      double outerR = iconR + Math.max(6.0, iconR * 0.7);
+      // 图标是按**方形**绘制的，而阴影是圆形：内缘必须用方形的**外接圆**（iconR * √2），
+      // 否则圆形覆盖不到方形四角、却会盖住四条边的中部。
+      double squareCircumRadius = iconR * 1.41421356;
+      double innerR = squareCircumRadius + 1.0;
+      double outerR = innerR + Math.max(6.0, iconR * 0.5);
 
       int cx = Math.round(centerX);
       int cy = Math.round(centerY);
 
-      // 层数随半径增长，保证大图标下过渡也细腻（不至于出现明显色阶）
-      int layers = (int)Math.max(6, Math.min(28, Math.round(outerR / 3.0)));
+      // 层数随环带宽度增长，保证过渡细腻
+      int layers = (int)Math.max(6, Math.min(24, Math.round((outerR - innerR) / 1.5)));
       for (int i = layers - 1; i >= 0; i--) {
-         // i=layers-1 是最外层（最淡），i=0 是最内层（最深）；倒序绘制让内层覆盖外层
+         // i=layers-1 最外层（最淡），i=0 最内层（最深）；倒序绘制让内层覆盖外层
          double t = (double)i / (double)Math.max(1, layers - 1); // 0=内 1=外
          double r = innerR + (outerR - innerR) * t;
          int alpha = (int)Math.round((double)SELECTED_SHADOW_ALPHA_INNER * (1.0 - t));
@@ -304,22 +304,41 @@ public final class WarpOverlay {
          }
 
          int color = (alpha << 24) | SELECTED_SHADOW_RGB;
-         fillDisc(ctx, cx, cy, r, color);
+         // 关键：这里必须画**环带**而不是实心圆盘。
+         // 早先用实心圆叠加，最内层那个 r=innerR 的圆盘会把整个方形图标盖住
+         // （表现就是一坨黑影糊在图标上）。
+         fillRing(ctx, cx, cy, r, innerR, color);
       }
    }
 
-   /** 填充一个实心圆（逐行算弦宽），用于叠加出渐变阴影。 */
-   private static void fillDisc(GuiGraphics ctx, int cx, int cy, double r, int color) {
-      int rows = (int)Math.ceil(r);
+   /**
+    * 填充一条圆环带（内径固定为 {@code innerR}，外径为 {@code outerR}），内缘以内保持透明。
+    */
+   private static void fillRing(GuiGraphics ctx, int cx, int cy, double outerR, double innerR, int color) {
+      int rows = (int)Math.ceil(outerR);
       for (int y = cy - rows; y <= cy + rows; y++) {
          double dy = (double)y + 0.5 - (double)cy;
-         double sq = r * r - dy * dy;
-         if (sq < 0.0) {
+         double outSq = outerR * outerR - dy * dy;
+         if (outSq < 0.0) {
             continue;
          }
 
-         int half = (int)Math.ceil(Math.sqrt(sq));
-         ctx.fill(cx - half, y, cx + half, y + 1, color);
+         int xOut = (int)Math.ceil(Math.sqrt(outSq));
+         int xIn = 0;
+         double inSq = innerR * innerR - dy * dy;
+         if (inSq > 0.0) {
+            xIn = (int)Math.ceil(Math.sqrt(inSq));
+         }
+
+         // 左侧环带
+         if (cx - xIn > cx - xOut) {
+            ctx.fill(cx - xOut, y, cx - xIn, y + 1, color);
+         }
+
+         // 右侧环带
+         if (cx + xOut > cx + xIn) {
+            ctx.fill(cx + xIn, y, cx + xOut + 1, y + 1, color);
+         }
       }
    }
 
