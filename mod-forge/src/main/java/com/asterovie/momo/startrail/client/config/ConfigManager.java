@@ -153,6 +153,8 @@ public class ConfigManager {
       public boolean showPolygons = true;
       public boolean showWarps = true;
       public boolean showCoordinates = true;
+      /** 是否在小地图下方显示当前地区名（默认开）。 */
+      public boolean showRegionNameBelow = true;
       public float regionBorderWidth = 2.0F;
       public int chunkUpdateInterval = 5;
       public boolean caveMode = false;

@@ -1008,7 +1008,9 @@ public class WorldMapScreen extends Screen {
 
    private int[] getSettingsPanelRect() {
       int w = Math.min(380, this.width - 40);
-      int h = Math.min(280, this.height - 40);
+      // 小地图设置页要放 8 行（方位/大小/形状/NPC/坐标/地区名），
+      // 原来 280 的高度装不下，加高到 340；大地图设置页行数少，多出来的空间不影响。
+      int h = Math.min(340, this.height - 40);
       int x0 = (this.width - w) / 2;
       int y0 = (this.height - h) / 2;
       return new int[]{x0, y0, x0 + w, y0 + h};
@@ -1178,6 +1180,18 @@ public class WorldMapScreen extends Screen {
       int[] tNpc = this.getSettingsToggleRect(6);
       this.drawSettingsLabel(context, "\u663e\u793a NPC \u5934\u50cf", labelX, tNpc[1] + 4);
       this.drawSettingsButton(context, tNpc, showNpcs ? "\u5f00" : "\u5173", showNpcs, this.inRect(mouseX, mouseY, tNpc));
+
+      // 第 7 行：小地图下方坐标
+      boolean showCoords = cfg.minimap.showCoordinates;
+      int[] tCoord = this.getSettingsToggleRect(7);
+      this.drawSettingsLabel(context, "\u663e\u793a\u5750\u6807", labelX, tCoord[1] + 4);
+      this.drawSettingsButton(context, tCoord, showCoords ? "\u5f00" : "\u5173", showCoords, this.inRect(mouseX, mouseY, tCoord));
+
+      // 第 8 行：坐标下方的地区名
+      boolean showRegionName = cfg.minimap.showRegionNameBelow;
+      int[] tRegion = this.getSettingsToggleRect(8);
+      this.drawSettingsLabel(context, "\u663e\u793a\u5730\u533a\u540d", labelX, tRegion[1] + 4);
+      this.drawSettingsButton(context, tRegion, showRegionName ? "\u5f00" : "\u5173", showRegionName, this.inRect(mouseX, mouseY, tRegion));
    }
 
    private void handleSettingsClick(double mouseX, double mouseY) {
@@ -1283,6 +1297,22 @@ public class WorldMapScreen extends Screen {
          if (this.inRect(mx, my, tNpc)) {
             this.playClickSound();
             cfg.minimap.showNpcs = !cfg.minimap.showNpcs;
+            this.saveSettings();
+            return;
+         }
+
+         int[] tCoord = this.getSettingsToggleRect(7);
+         if (this.inRect(mx, my, tCoord)) {
+            this.playClickSound();
+            cfg.minimap.showCoordinates = !cfg.minimap.showCoordinates;
+            this.saveSettings();
+            return;
+         }
+
+         int[] tRegion = this.getSettingsToggleRect(8);
+         if (this.inRect(mx, my, tRegion)) {
+            this.playClickSound();
+            cfg.minimap.showRegionNameBelow = !cfg.minimap.showRegionNameBelow;
             this.saveSettings();
          }
       }

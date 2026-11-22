@@ -207,22 +207,54 @@ public class MinimapRenderer {
          }
          matrices.popPose();
          if (client.player != null) {
-            String coords = String.format("X: %.1f  Y: %.1f  Z: %.1f", client.player.getX(), client.player.getY(), client.player.getZ());
             Font tr = client.font;
-            int textWidth = tr.width(coords);
-            int textX = centerX - textWidth / 2;
-            int textY = mapY + this.mapSize + 4;
-            drawContext.fill(textX - 3, textY - 2, textX + textWidth + 3, textY + 9, Integer.MIN_VALUE);
-            // 白色文字（原来是黄色 16776960），与界面上其它信息文字保持一致
-            drawContext.drawString(tr, coords, textX, textY, 16777215);
-         }
+            // 坐标与地区名共用同一条竖直排布：坐标一行，地区名紧跟其下
+            int lineY = mapY + this.mapSize + 4;
 
-         // 小地图不再显示当前区域名：界面上已经有坐标与标点，名字反而挤占视线。
-         // 区域信息交给大地图显示（见 WorldMapScreen.renderRegionLabels）。
+            if (config.minimap.showCoordinates) {
+               // 三个数字形式，不再带 X:/Y:/Z: 前缀
+               String coords = String.format("%.1f  %.1f  %.1f", client.player.getX(), client.player.getY(), client.player.getZ());
+               int textWidth = tr.width(coords);
+               int textX = centerX - textWidth / 2;
+               // 不再画黑色底衬，也不画文字投影：直接浮在画面上
+               drawContext.drawString(tr, coords, textX, lineY, 16777215, false);
+               lineY += 11;
+            }
+
+            if (config.minimap.showRegionNameBelow) {
+               String regionName = this.currentRegionName(client);
+               if (regionName != null && !regionName.isEmpty()) {
+                  int nameWidth = tr.width(regionName);
+                  int nameX = centerX - nameWidth / 2;
+                  drawContext.drawString(tr, regionName, nameX, lineY, 16777215, false);
+               }
+            }
+         }
 
          RenderSystem.disableBlend();
          RenderSystem.setShader(GameRenderer::getPositionColorShader);
       }
+   }
+
+   /**
+    * 取玩家当前所在地区名；不在任何地区内时返回 null。
+    *
+    * <p>与坐标一起显示在小地图下方，构成「坐标 + 地区名」两行信息。
+    */
+   private String currentRegionName(Minecraft client) {
+      if (client.player == null || client.level == null || this.regionDataStore == null) {
+         return null;
+      }
+
+      String world = client.level.dimension().location().toString();
+      java.util.List<MapRegion> regions =
+         this.regionDataStore.getRegionsAt2D(world, (int)client.player.getX(), (int)client.player.getZ());
+      if (regions == null || regions.isEmpty()) {
+         return null;
+      }
+
+      String name = regions.get(0).getName();
+      return name == null || name.isEmpty() ? null : name;
    }
 
    private void renderRegionBorders(PoseStack matrices, Minecraft client, int centerX, int centerY, int radius, double playerX, double playerZ) {
