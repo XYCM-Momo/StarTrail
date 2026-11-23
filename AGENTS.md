@@ -11,7 +11,10 @@
 
 Minecraft **1.20.1** 双端地图系统「**星轨 StarTrail**」：Forge 客户端模组（`mod-forge/`）+ Paper 服务端插件（`plugin-paper/`）。
 Java 包 `com.asterovie.momo.startrail.{client,server}`，署名 **星野尘梦工作室 · 默默**。
-当前版本 **1.0.0**（模组与插件同步）。
+版本号**不在这里写死**：模组看 `mod-forge/gradle.properties` 的 `mod_version`，
+插件看 `plugin-paper/src/main/resources/plugin.yml` 的 `version`（第 5 节有完整说明）；
+最近一次发布记录见 `CHANGELOG.md` 与 `releases/README.md`。
+⚠️ 模组与插件的版本号**各自独立递增**，不一定相同。
 
 ---
 
