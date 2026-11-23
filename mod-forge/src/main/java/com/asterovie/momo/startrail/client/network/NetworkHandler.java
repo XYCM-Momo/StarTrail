@@ -482,12 +482,29 @@ public class NetworkHandler {
         String id = buf.readUtf();
         String name = buf.readUtf();
         String world = buf.readUtf();
-        int minX = buf.readInt();
-        int minZ = buf.readInt();
-        int maxX = buf.readInt();
-        int maxZ = buf.readInt();
-        int minY = buf.readShort();
-        int maxY = buf.readShort();
+        double minX;
+        double minZ;
+        double maxX;
+        double maxZ;
+        double minY;
+        double maxY;
+        if (this.serverProtocolVersion >= 2) {
+            // 协议 2+：矩形区域的边界也用 double，支持小数坐标
+            minX = buf.readDouble();
+            minZ = buf.readDouble();
+            maxX = buf.readDouble();
+            maxZ = buf.readDouble();
+            minY = buf.readDouble();
+            maxY = buf.readDouble();
+        } else {
+            // 旧服务端（协议 1）：全部是整型
+            minX = buf.readInt();
+            minZ = buf.readInt();
+            maxX = buf.readInt();
+            maxZ = buf.readInt();
+            minY = buf.readShort();
+            maxY = buf.readShort();
+        }
         RegionType type = RegionType.fromOrdinal(buf.readByte());
         int borderColor = buf.readInt();
         int fillColor = buf.readInt();

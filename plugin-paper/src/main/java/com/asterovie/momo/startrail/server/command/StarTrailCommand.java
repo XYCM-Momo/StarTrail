@@ -155,6 +155,7 @@ public class StarTrailCommand implements CommandExecutor, TabCompleter {
       this.plugin.getLanguageManager().load();
       this.plugin.getMapImageManager().loadImages();
       this.plugin.getPolygonRegionManager().load();
+      this.plugin.getMapRegionManager().load();
       if (this.plugin.getWarpPointManager() != null) {
          this.plugin.getWarpPointManager().load();
       }
@@ -174,6 +175,7 @@ public class StarTrailCommand implements CommandExecutor, TabCompleter {
       for (Player player : this.plugin.getServer().getOnlinePlayers()) {
          this.plugin.getPacketSender().sendHandshake(player);
          this.plugin.getPacketSender().sendMapImageSync(player);
+         this.plugin.getPacketSender().sendMapRegions(player);
          this.plugin.getPacketSender().sendPolygonRegions(player);
          if (this.plugin.getWarpPointManager() != null) {
             this.plugin.getPacketSender().sendWarps(player);

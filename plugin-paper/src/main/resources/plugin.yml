@@ -1,5 +1,5 @@
 name: StarTrail
-version: '1.0.5'
+version: '1.0.6'
 main: com.asterovie.momo.startrail.server.StarTrailPlugin
 api-version: '1.20'
 authors: ['星野尘梦工作室 · 默默']

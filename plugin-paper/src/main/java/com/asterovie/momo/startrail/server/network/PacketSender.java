@@ -137,6 +137,42 @@ public class PacketSender {
       buf.writeInt(image.getMaxZ());
    }
 
+   /**
+    * 下发矩形区域全量同步（包类型 2）。
+    *
+    * <p>协议 2 起边界用 double 传输，支持小数坐标。
+    * 客户端 {@code readRegion} 按握手包里的协议号决定按 double 还是 int 解析。
+    */
+   public void sendMapRegions(Player player) {
+      try {
+         Collection<com.asterovie.momo.startrail.server.region.MapRegion> all =
+            this.plugin.getMapRegionManager().getAll();
+         PacketSender.PacketBuffer buf = new PacketSender.PacketBuffer();
+         buf.writeByte(2);
+         buf.writeVarInt(all.size());
+
+         for (com.asterovie.momo.startrail.server.region.MapRegion r : all) {
+            buf.writeString(r.getId());
+            buf.writeString(r.getName());
+            buf.writeString(this.toClientWorldKey(r.getWorld()));
+            buf.writeDouble(r.getMinX());
+            buf.writeDouble(r.getMinZ());
+            buf.writeDouble(r.getMaxX());
+            buf.writeDouble(r.getMaxZ());
+            buf.writeDouble(r.getMinY());
+            buf.writeDouble(r.getMaxY());
+            buf.writeByte(r.getType().ordinal());
+            buf.writeInt(r.getBorderColor());
+            buf.writeInt(r.getFillColor());
+            buf.writeFloat(r.getBorderWidth());
+            buf.writeString(r.getDescription() == null ? "" : r.getDescription());
+         }
+
+         this.sendPacket(player, buf.toByteArray());
+      } catch (Exception var6) {
+         this.plugin.getLogger().warning("发送矩形区域包失败: " + var6.getMessage());
+      }
+   }
    public void sendPolygonRegions(Player player) {
       try {
          Collection<PolygonRegion> all = this.plugin.getPolygonRegionManager().getAll();

@@ -9,6 +9,7 @@ import com.asterovie.momo.startrail.server.mythic.MythicMobTracker;
 import com.asterovie.momo.startrail.server.network.PacketSender;
 import com.asterovie.momo.startrail.server.player.PlayerTracker;
 import com.asterovie.momo.startrail.server.player.PolygonRegionTracker;
+import com.asterovie.momo.startrail.server.region.MapRegionManager;
 import com.asterovie.momo.startrail.server.region.PolygonRegionManager;
 import com.asterovie.momo.startrail.server.util.LanguageManager;
 import com.asterovie.momo.startrail.server.warp.WarpPointManager;
@@ -23,6 +24,7 @@ public class StarTrailPlugin extends JavaPlugin {
    private PacketSender packetSender;
    private PlayerTracker playerTracker;
    private PolygonRegionManager polygonRegionManager;
+   private MapRegionManager mapRegionManager;
    private PolygonRegionTracker polygonRegionTracker;
    private WarpPointManager warpPointManager;
    private WaypointManager waypointManager;
@@ -47,12 +49,14 @@ public class StarTrailPlugin extends JavaPlugin {
       this.packetSender = new PacketSender(this);
       this.playerTracker = new PlayerTracker(this);
       this.polygonRegionManager = new PolygonRegionManager(this);
+      this.mapRegionManager = new MapRegionManager(this);
       this.polygonRegionTracker = new PolygonRegionTracker(this);
       this.warpPointManager = new WarpPointManager(this);
       this.waypointManager = new WaypointManager(this);
       this.languageManager = new LanguageManager(this);
       this.mapImageManager.loadImages();
       this.polygonRegionManager.load();
+      this.mapRegionManager.load();
       this.warpPointManager.load();
       this.waypointManager.loadAll();
       this.getServer().getMessenger().registerOutgoingPluginChannel(this, "startrail:main");
@@ -102,6 +106,10 @@ public class StarTrailPlugin extends JavaPlugin {
 
    public PlayerTracker getPlayerTracker() {
       return this.playerTracker;
+   }
+
+   public MapRegionManager getMapRegionManager() {
+      return this.mapRegionManager;
    }
 
    public PolygonRegionManager getPolygonRegionManager() {

@@ -37,7 +37,7 @@ Bukkit 只给「已注册该通道」的玩家发 `sendPluginMessage`，所以�
 | 类型 | 名称 | 方向 | 触发 | 备注 |
 |---|---|---|---|---|
 | 1 | 握手 Handshake | S→C | 玩家进服 | 下发服务端配置 |
-| 2 | ~~区域全量同步 RegionSync~~ | — | — | **v1.9.6 起已移除**（矩形系统删除，不再发送） |
+| 2 | 矩形区域全量同步 RegionSync | S→C | 进服 / reload / 换世界 | 协议 2 起边界为 double；**1.0.6 起重新启用** |
 | 3 | ~~区域增量更新 RegionUpdate~~ | — | — | **v1.9.6 起已移除**（矩形系统删除，不再发送） |
 | 4 | *（未使用）* | — | — | 保留空号，别占用 |
 | 5 | 地图图片绑定同步 MapImageSync | S→C | 进服 / reload | |
@@ -67,11 +67,40 @@ Bukkit 只给「已注册该通道」的玩家发 `sendPluginMessage`，所以�
 > 客户端读第 5、6 个字段时都包了 `try/catch`：老服务端少发字段也不会崩，
 > 分别退回默认 `true` / `false`。**加字段请保持这个习惯**，就能做到「服务端先升级、客户端后升级」。
 
-### 包 2 · 区域全量同步（**v1.9.6 起已移除**）
+### 包 2 · 矩形区域全量同步
 
-> 矩形区域系统已从插件中整体删除（多边形可表达任意矩形，见 5.1）。
-> 历史格式：`byte 2 / VarInt 数量 N / N × 区域记录`；包 3 为区域增量更新（带操作码）。
-> 客户端（模组 ≤ 1.9.11）仍保留矩形渲染代码，收不到包 2/3 自然不显示任何矩形，**无需改客户端**。
+> **v1.9.6 曾整体移除**矩形系统（服务端不再加载、不再发送），但**客户端一直保留接收与渲染代码**。
+> 结果是配置里写矩形区域时**静默失效**：既不显示，也没有任何警告。
+> **插件 1.0.6 / 模组 1.1.23 起重新启用**，并与其他区域一样支持小数坐标。
+
+```
+byte   包类型 = 2
+VarInt 数量 N
+N × {
+    string id
+    string name
+    string world          ← 已转成命名空间（如 minecraft:overworld）
+    double minX           ← 协议 2 起是 double；协议 1 是 int
+    double minZ
+    double maxX
+    double maxZ
+    double minY           ← 协议 2 起是 double；协议 1 是 short
+    double maxY
+    byte   type           ← RegionType 序号：0=NORMAL 1=SAFE 2=DANGER 3=CUSTOM
+    int    borderColor
+    int    fillColor
+    float  borderWidth
+    string description
+}
+```
+
+**区域分流**：服务端读同一个 `regions/` 目录，按 `shape` 字段分流——
+`shape: polygon`（或含 `polygon` 段）走包 6，其余（含默认值 `rectangle`）走本包。
+
+**`RegionType` 序号必须两端一致**，否则客户端会把安全区显示成危险区。
+
+**兼容性**：客户端按握手包协议号决定按 double 还是 int 解析；
+「新客户端 + 旧服务端」不会崩，只是坐标被取整。
 
 ### 包 5 · 地图图片绑定同步
 

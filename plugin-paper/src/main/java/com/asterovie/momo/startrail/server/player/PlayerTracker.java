@@ -42,8 +42,11 @@ public class PlayerTracker implements Listener {
    private void scheduleJoinSync(Player player, long delayTicks, boolean notify) {
       this.plugin.getServer().getScheduler().runTaskLater(this.plugin, () -> {
          if (player.isOnline()) {
+            // 顺序重要：握手包必须在最前，客户端收到后才知道按哪个协议解析后续数据
             this.plugin.getPacketSender().sendHandshake(player);
             this.plugin.getPacketSender().sendMapImageSync(player, notify);
+            // 矩形区域（包 2）与多边形区域（包 6）各自独立，两类都要发
+            this.plugin.getPacketSender().sendMapRegions(player);
             this.plugin.getPacketSender().sendPolygonRegions(player);
             this.plugin.getPacketSender().sendWarps(player);
          }
@@ -55,6 +58,8 @@ public class PlayerTracker implements Listener {
          if (player.isOnline()) {
             this.plugin.getPacketSender().sendWorldChange(player);
             this.plugin.getPacketSender().sendMapImageSync(player, false);
+            // 换世界时两类区域都要重发（区域按世界区分）
+            this.plugin.getPacketSender().sendMapRegions(player);
             this.plugin.getPacketSender().sendPolygonRegions(player);
             this.plugin.getPacketSender().sendWarps(player);
          }
