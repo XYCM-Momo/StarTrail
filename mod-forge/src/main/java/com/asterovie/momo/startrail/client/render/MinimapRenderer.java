@@ -8,6 +8,7 @@ import com.asterovie.momo.startrail.client.mythic.MobOverlay;
 import com.asterovie.momo.startrail.client.mythic.MythicMobStore;
 import com.asterovie.momo.startrail.client.nav.NavigationManager;
 import com.asterovie.momo.startrail.client.region.MapRegion;
+import com.asterovie.momo.startrail.client.region.PolygonRegion;
 import com.asterovie.momo.startrail.client.region.PolygonRegionStore;
 import com.asterovie.momo.startrail.client.region.RegionDataStore;
 import com.asterovie.momo.startrail.client.warp.WarpIconManager;
@@ -240,21 +241,94 @@ public class MinimapRenderer {
     * 取玩家当前所在地区名；不在任何地区内时返回 null。
     *
     * <p>与坐标一起显示在小地图下方，构成「坐标 + 地区名」两行信息。
+    *
+    * <p><b>两类区域都要查</b>：矩形区域存在 {@code regionDataStore}，
+    * 多边形区域存在 {@code polygonRegionStore}——线上配置目前**全部是多边形**
+    * （{@code regions.yml} 里的 {@code polygons:} 段）。
+    * 只查矩形的话在线上永远查不到东西，地区名就不会出现。
+    *
+    * <p>多边形优先：功能分区（后勤部、训练场等）一般比整片矩形大陆更具体，
+    * 站在两个都命中的位置时显示更精确的那个。
     */
    private String currentRegionName(Minecraft client) {
-      if (client.player == null || client.level == null || this.regionDataStore == null) {
+      if (client.player == null || client.level == null) {
          return null;
       }
 
       String world = client.level.dimension().location().toString();
-      java.util.List<MapRegion> regions =
-         this.regionDataStore.getRegionsAt2D(world, (int)client.player.getX(), (int)client.player.getZ());
-      if (regions == null || regions.isEmpty()) {
+      double px = client.player.getX();
+      double pz = client.player.getZ();
+
+      // 1) 多边形区域优先（更具体）
+      if (this.polygonRegionStore != null) {
+         java.util.List<PolygonRegion> polys = this.polygonRegionStore.getForWorld(world);
+         if (polys != null) {
+            for (PolygonRegion poly : polys) {
+               if (containsPoint(poly, px, pz)) {
+                  String name = cleanRegionName(poly.getName());
+                  if (name != null) {
+                     return name;
+                  }
+               }
+            }
+         }
+      }
+
+      // 2) 矩形区域兜底
+      if (this.regionDataStore != null) {
+         java.util.List<MapRegion> regions = this.regionDataStore.getRegionsAt2D(world, (int)px, (int)pz);
+         if (regions != null) {
+            for (MapRegion region : regions) {
+               String name = cleanRegionName(region.getName());
+               if (name != null) {
+                  return name;
+               }
+            }
+         }
+      }
+
+      return null;
+   }
+
+   /** 区域名去掉空值与纯空白的情况。 */
+   private static String cleanRegionName(String raw) {
+      if (raw == null) {
          return null;
       }
 
-      String name = regions.get(0).getName();
-      return name == null || name.isEmpty() ? null : name;
+      String trimmed = raw.trim();
+      return trimmed.isEmpty() ? null : trimmed;
+   }
+
+   /**
+    * 点是否在多边形内（射线法）。
+    *
+    * <p>顶点是 {@code int[]{x, z}}，按世界坐标判定。
+    */
+   private static boolean containsPoint(PolygonRegion poly, double px, double pz) {
+      java.util.List<int[]> verts = poly.getVertices();
+      if (verts == null || verts.size() < 3) {
+         return false;
+      }
+
+      boolean inside = false;
+      int n = verts.size();
+      for (int i = 0, j = n - 1; i < n; j = i++) {
+         double xi = verts.get(i)[0];
+         double zi = verts.get(i)[1];
+         double xj = verts.get(j)[0];
+         double zj = verts.get(j)[1];
+
+         boolean straddles = (zi > pz) != (zj > pz);
+         if (straddles) {
+            double crossX = (xj - xi) * (pz - zi) / (zj - zi) + xi;
+            if (px < crossX) {
+               inside = !inside;
+            }
+         }
+      }
+
+      return inside;
    }
 
    private void renderRegionBorders(PoseStack matrices, Minecraft client, int centerX, int centerY, int radius, double playerX, double playerZ) {

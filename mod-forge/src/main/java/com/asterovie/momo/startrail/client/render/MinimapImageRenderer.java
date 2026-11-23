@@ -183,7 +183,13 @@ public class MinimapImageRenderer {
       }
    }
 
-   private static float computeBrightness(Level world) {
+   /**
+    * 按世界时间算一个整体亮度系数（0.4 ~ 1.0）。
+    *
+    * <p>公开给大地图复用：小地图和大地图应当同步明暗，
+    * 否则夜里小地图变暗、大地图还亮着，看着像两套系统。
+    */
+   public static float computeBrightness(Level world) {
       long tod = world.getDayTime() % 24000L;
       float phase = (float)tod / 24000.0F;
       float t = (float)Math.cos((Math.PI * 2) * (double)(phase - 0.25F));

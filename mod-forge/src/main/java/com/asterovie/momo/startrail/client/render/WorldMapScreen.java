@@ -256,11 +256,15 @@ public class WorldMapScreen extends Screen {
                      RenderSystem.bindTexture(tex.getGlTextureId());
                      RenderSystem.setShaderTexture(0, tex.getTextureId());
                      RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
+                     // 与世界时间同步的明暗：和小地图用同一个亮度函数，
+                     // 否则夜里小地图变暗、大地图还全亮，看着像两套系统。
+                     int br = Math.max(0, Math.min(255,
+                        (int)(MinimapImageRenderer.computeBrightness(client.level) * 255.0F)));
                      buffer.begin(Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
-                     buffer.vertex(matrix, screenX1, screenY1, 0.0F).uv(0.0F, 0.0F).color(255, 255, 255, 255).endVertex();
-                     buffer.vertex(matrix, screenX1, screenY2, 0.0F).uv(0.0F, 1.0F).color(255, 255, 255, 255).endVertex();
-                     buffer.vertex(matrix, screenX2, screenY2, 0.0F).uv(1.0F, 1.0F).color(255, 255, 255, 255).endVertex();
-                     buffer.vertex(matrix, screenX2, screenY1, 0.0F).uv(1.0F, 0.0F).color(255, 255, 255, 255).endVertex();
+                     buffer.vertex(matrix, screenX1, screenY1, 0.0F).uv(0.0F, 0.0F).color(br, br, br, 255).endVertex();
+                     buffer.vertex(matrix, screenX1, screenY2, 0.0F).uv(0.0F, 1.0F).color(br, br, br, 255).endVertex();
+                     buffer.vertex(matrix, screenX2, screenY2, 0.0F).uv(1.0F, 1.0F).color(br, br, br, 255).endVertex();
+                     buffer.vertex(matrix, screenX2, screenY1, 0.0F).uv(1.0F, 0.0F).color(br, br, br, 255).endVertex();
                      tessellator.end();
                      this.renderedImages++;
                   }
