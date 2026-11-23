@@ -127,8 +127,12 @@ public class MinimapRenderer {
          }
 
          if (config.minimap.showPolygons && client.player != null && client.level != null) {
+            // 小地图**不画多边形区域名**：地图本身很小，名字会压住地形、也容易和坐标挤在一起。
+            // 区域名只在大地图显示（WorldMapScreen 的矩形名 + 多边形名）。
+            // 最后那个 false 就是 showLabels —— 早先用的是简写重载，它默认 true，才让名字冒出来。
             PolygonOverlay.render(
-               worldKey, this.polygonRegionStore, playerX, playerZ, centerX, centerY, this.zoom, drawContext, client.font, 1.0F, true, centerX, centerY, radius
+               worldKey, this.polygonRegionStore, playerX, playerZ, centerX, centerY, this.zoom, drawContext, client.font, 1.0F,
+               true, centerX, centerY, radius, -1, -1, -1, -1, false
             );
          }
 
