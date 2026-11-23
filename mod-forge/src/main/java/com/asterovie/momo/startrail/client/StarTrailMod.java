@@ -30,6 +30,8 @@ public class StarTrailMod {
         LOGGER.info("StarTrail 模组正在加载...");
         if (FMLEnvironment.dist == Dist.CLIENT) {
             FMLJavaModLoadingContext.get().getModEventBus().addListener(StarTrailClient::onRegisterKeyMappings);
+            // 小地图走 GUI overlay 注册，才能排在 F3 调试屏之前（否则会盖住 F3）
+            FMLJavaModLoadingContext.get().getModEventBus().addListener(StarTrailClient::onRegisterGuiOverlays);
             StarTrailClient.init();
         }
     }

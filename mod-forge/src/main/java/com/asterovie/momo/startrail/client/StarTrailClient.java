@@ -96,6 +96,16 @@ public class StarTrailClient {
     }
 
     /** Registered on the mod event bus by {@link StarTrailMod}. */
+    /**
+     * 把小地图注册成 GUI overlay（排在 F3 调试屏之前），
+     * 这样开 F3 时调试面板会叠在小地图上面，而不是被小地图盖住。
+     */
+    public static void onRegisterGuiOverlays(net.minecraftforge.client.event.RegisterGuiOverlaysEvent event) {
+        StarTrailClient c = instance;
+        if (c != null && c.minimapManager != null) {
+            c.minimapManager.registerOverlay(event);
+        }
+    }
     public static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
         openWorldMapKey = new KeyMapping("key.startrail.openworldmap", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_M, "category.startrail");
         toggleMinimapKey = new KeyMapping("key.startrail.toggleminimap", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_UNKNOWN, "category.startrail");

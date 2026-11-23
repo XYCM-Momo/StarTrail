@@ -8,8 +8,6 @@ import com.asterovie.momo.startrail.client.warp.WarpIconManager;
 import com.asterovie.momo.startrail.client.warp.WarpPointStore;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraftforge.client.event.RenderGuiEvent;
-import net.minecraftforge.common.MinecraftForge;
 
 public class MinimapManager {
    private final RegionDataStore regionDataStore;
@@ -36,19 +34,28 @@ public class MinimapManager {
    }
 
    public void init() {
-      MinecraftForge.EVENT_BUS.addListener(this::onRenderGui);
+      // 小地图改为注册成 GUI overlay（见 registerOverlay），不再走 RenderGuiEvent.Post。
+      // 原因：Post 在「所有 overlay 之后」触发，会把 F3 调试屏盖住；
+      // 排在 DEBUG_TEXT 之前渲染，F3 才能正常叠在小地图上面。
    }
 
    /**
-    * Replaces Fabric's HudRenderCallback with Forge's RenderGuiEvent.Post.
+    * 注册为 GUI overlay，并排在 F3 调试屏（{@code DEBUG_TEXT}）**之前**。
     *
-    * <p>Forge fires this event from ForgeGui#render, which GameRenderer still calls while a screen
-    * is open (that is why the hotbar stays visible behind the chat). The vanilla mod used to bail
-    * out whenever any screen was open, which made the minimap vanish as soon as the chat bar was
-    * opened. Now the minimap keeps rendering while a GUI is open, unless the player turns that off
-    * with {@code minimap.hideInGui} in config/startrail.json.
+    * <p>Forge 按 overlay 注册顺序依次渲染，后画的盖住先画的。
+    * 排在 DEBUG_TEXT 之前 ⇒ F3 面板画在小地图之上，玩家开 F3 时能看清调试信息，
+    * 小地图也不再需要为了躲避 F3 而挪位置/缩小。
     */
-   private void onRenderGui(RenderGuiEvent.Post event) {
+   public void registerOverlay(net.minecraftforge.client.event.RegisterGuiOverlaysEvent event) {
+      event.registerBelow(
+         net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.DEBUG_TEXT.id(),
+         "minimap",
+         // IGuiOverlay.render(ForgeGui, GuiGraphics, partialTick, screenWidth, screenHeight)
+         (forgeGui, guiGraphics, partialTick, screenWidth, screenHeight) -> this.renderOverlay(guiGraphics, partialTick)
+      );
+   }
+
+   private void renderOverlay(net.minecraft.client.gui.GuiGraphics gui, float partialTick) {
       if (!this.enabled) {
          return;
       }
@@ -58,11 +65,10 @@ public class MinimapManager {
          return;
       }
 
+      // 开着界面时：大地图铺满屏幕不画（「小地图设置」页例外），其它界面按配置决定
       Screen screen = client.screen;
       if (screen != null) {
          if (screen instanceof WorldMapScreen) {
-            // 大地图铺满屏幕时画小地图没意义；但「小地图设置」页是例外——
-            // 那里大地图已经收起来了，正好让小地图按当前设置真实显示，供边调边看。
             if (!((WorldMapScreen)screen).showsMinimapInSettings()) {
                return;
             }
@@ -74,7 +80,7 @@ public class MinimapManager {
          }
       }
 
-      this.renderer.render(event.getGuiGraphics(), client, event.getPartialTick());
+      this.renderer.render(gui, client, partialTick);
    }
 
    public void toggleMinimap() {

@@ -5,6 +5,30 @@
 
 ---
 
+## [模组 1.1.26] — 2026-11-24（**只换客户端，插件 1.0.6 不变**）
+
+**F3 调试屏改为叠在小地图**上方**（1.1.25 的做法方向反了）。**
+
+* **反馈**：要的是「F3 面板盖在小地图上面」，而不是把小地图挪到 F3 信息下方。
+* **根因**：小地图原来挂在 `RenderGuiEvent.Post`，而该事件在**所有 GUI overlay 之后**触发，
+  所以小地图永远画在 F3 上面，把调试信息盖住了。
+* **改法**：小地图改为注册成 **GUI overlay**，用
+  `registerBelow(VanillaGuiOverlay.DEBUG_TEXT.id(), ...)` 排在 F3 之前渲染——
+  Forge 按注册顺序依次绘制，**排在前面 ⇒ 被 F3 盖住**。
+  * 判定逻辑（大地图界面、`hideInGui` 等）原样迁移到 `renderOverlay`，行为不变；
+  * `IGuiOverlay.render` 签名是 `(ForgeGui, GuiGraphics, float, int, int)` 共 5 个参数
+    （首次编译漏了 `ForgeGui`，已修）。
+* **同时撤掉 1.1.25 的挪移逻辑**：不再为 F3 下移或缩小地图，
+  **小地图保持用户设置的方位与大小**。`DebugScreenProbe` 已无调用者，整个文件删除。
+* **验证**：`gradlew compileJava` 与 `build-mod.ps1` 均 `BUILD SUCCESSFUL`；
+  逐项确认 —— mod 总线已监听 `RegisterGuiOverlaysEvent`、注册用的是 `DEBUG_TEXT` 锚点、
+  旧的 `addListener(this::onRenderGui)`（小地图那处）已移除、
+  `MinimapRenderer` 里已无任何 F3 挪移代码、`DebugScreenProbe` 无残留引用。
+  （`StarTrailClient.onRenderGui` 仍在，只管导航标记，与小地图无关。）
+* **要不要换 jar**：只需客户端 `startrail-forge-1.1.26.jar` → `versions\时之旅者\mods\`（需重启游戏）。
+  服务端 `StarTrail-Plugin-1.0.6.jar` 不变。
+
+---
 ## [模组 1.1.25] — 2026-11-24（**只换客户端，插件 1.0.6 不变**）
 
 **F3 调试屏打开时，小地图自动挪到调试面板下方，不再被挡住。**

@@ -86,25 +86,9 @@ public class MinimapRenderer {
                mapY = margin;
          }
 
-         // F3 调试屏避让：调试屏左栏从屏幕顶部往下铺一大片，右上/左上角的小地图会被它盖住。
-         // 这里把小地图整体下移到调试面板下方；下方放不下就缩小，实在放不下才暂时隐藏。
-         // 左下/右下两个方位本来就在屏幕底部，不会和顶部面板重叠，无需处理。
-         int debugHeight = DebugScreenProbe.debugPanelHeight(client);
-         boolean overlapsDebug = debugHeight > 0 && mapY < debugHeight + margin;
-         if (overlapsDebug) {
-            int availBelow = screenHeight - debugHeight - margin;
-            if (availBelow >= this.mapSize + margin) {
-               // 常见情况：屏幕够高，直接挪到面板下方
-               mapY = debugHeight + margin;
-            } else if (availBelow >= 48) {
-               // 屏幕较矮：缩小地图，保证能塞进面板下方
-               this.mapSize = Math.min(this.mapSize, Math.max(48, availBelow - margin));
-               mapY = debugHeight + margin;
-            } else {
-               // 连 48px 都放不下，暂时不画（总比被 F3 盖住更好）
-               return;
-            }
-         }
+         // F3 调试屏与小地图的层级关系由**绘制顺序**保证：
+         // 小地图注册成 GUI overlay 并排在 DEBUG_TEXT 之前，F3 会叠在小地图上面。
+         // 所以这里**不再**为 F3 挪位置或缩小地图——地图保持用户设置的方位与大小。
 
          // 聊天框避让：聊天框（开着或正显示消息）盖到小地图时，把地图挪到聊天框上方；
          // 上方放不下就缩小地图，屏幕实在太小连缩小版都放不下则暂时隐藏
