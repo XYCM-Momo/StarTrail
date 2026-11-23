@@ -6,7 +6,7 @@ public class PolygonRegion {
    private final String id;
    private final String name;
    private final String world;
-   private final List<int[]> vertices;
+   private final List<double[]> vertices;
    private final int lineColor;
    private final int fillColor;
    private final boolean showLine;
@@ -14,7 +14,7 @@ public class PolygonRegion {
    private final double centerX;
    private final double centerZ;
 
-   public PolygonRegion(String id, String name, String world, List<int[]> vertices, int lineColor, int fillColor, boolean showLine, boolean fillEnabled) {
+   public PolygonRegion(String id, String name, String world, List<double[]> vertices, int lineColor, int fillColor, boolean showLine, boolean fillEnabled) {
       this.id = id;
       this.name = name;
       this.world = world;
@@ -27,7 +27,7 @@ public class PolygonRegion {
          double sumX = 0.0;
          double sumZ = 0.0;
 
-         for (int[] v : vertices) {
+         for (double[] v : vertices) {
             sumX += (double)v[0];
             sumZ += (double)v[1];
          }
@@ -52,7 +52,7 @@ public class PolygonRegion {
       return this.world;
    }
 
-   public List<int[]> getVertices() {
+   public List<double[]> getVertices() {
       return this.vertices;
    }
 

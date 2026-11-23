@@ -95,13 +95,22 @@ N × {
     string name
     string world      ← 已转成命名空间（如 minecraft:overworld）
     VarInt 顶点数 M
-    M × { int x, int z }
+    M × { double x, double z }    ← 协议 2 起是 double；协议 1 是 int
     int    lineColor
     int    fillColor
     byte   showLine     (1/0)
     byte   fillEnabled  (1/0)
 }
 ```
+
+> **协议 2（插件 1.0.5 / 模组 1.1.22 起）顶点由 `int` 改为 `double`。**
+>
+> 原因：区域坐标允许写小数（如 `{x: -123.5, z: 373.5}`），
+> 用 int 传输会把小数截断，导致大地图画出来的线**偏移到整数格**（最大偏 1 格）。
+>
+> **兼容性**：客户端按握手包里的协议号选择解析方式——
+> `>= 2` 读 double，否则读 int。所以「新客户端 + 旧服务端」仍能正常显示（只是坐标被取整），
+> 不会出现整包错位。但要让小数真正生效，**两端都必须升级**。
 
 ### 包 7 · 传送点同步
 

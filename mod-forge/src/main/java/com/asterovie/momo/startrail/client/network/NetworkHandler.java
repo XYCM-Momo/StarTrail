@@ -67,6 +67,16 @@ public class NetworkHandler {
     private static NetworkHandler active;
     private static boolean messagesRegistered;
 
+    /**
+     * 服务端协议版本，由握手包带上（握手包总是先于其它包发出）。
+     *
+     * <p>用途：协议 2 起多边形顶点改用 double 传输（支持小数坐标），
+     * 之前是 int。按这个版本号决定多边形包的解析方式，
+     * 避免「新客户端 + 旧服务端」时整包按错误宽度读取、后续数据全乱。
+     * 默认 1 表示还没收到握手（按旧格式解析，最保守）。
+     */
+    private volatile int serverProtocolVersion = 1;
+
     private final RegionDataStore regionDataStore;
     private final PolygonRegionStore polygonRegionStore;
     private final WarpPointStore warpPointStore;
@@ -170,6 +180,8 @@ public class NetworkHandler {
 
     private void handleHandshake(Minecraft client, FriendlyByteBuf buf) {
         int protocolVersion = buf.readInt();
+        // 记下服务端协议版本：多边形包的顶点宽度取决于它（1=int，2+=double）
+        this.serverProtocolVersion = protocolVersion;
         String serverId = buf.readUtf();
         double warpIconHideThreshold = buf.readDouble();
         String currentWorld = buf.readUtf();
@@ -315,12 +327,20 @@ public class NetworkHandler {
             String name = buf.readUtf();
             String world = buf.readUtf();
             int vertexCount = buf.readVarInt();
-            List<int[]> verts = new ArrayList<>(vertexCount);
+            List<double[]> verts = new ArrayList<>(vertexCount);
 
             for (int j = 0; j < vertexCount; j++) {
-                int x = buf.readInt();
-                int z = buf.readInt();
-                verts.add(new int[]{x, z});
+                if (this.serverProtocolVersion >= 2) {
+                    // 协议 2+：顶点是 double，区域坐标允许小数
+                    double x = buf.readDouble();
+                    double z = buf.readDouble();
+                    verts.add(new double[]{x, z});
+                } else {
+                    // 旧服务端（协议 1）：顶点是 int，按 int 读才不会错位
+                    int x = buf.readInt();
+                    int z = buf.readInt();
+                    verts.add(new double[]{x, z});
+                }
             }
 
             int lineColor = buf.readInt();

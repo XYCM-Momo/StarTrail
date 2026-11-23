@@ -132,18 +132,18 @@ public class StarTrailCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(this.msg("region-info-vertices", region.getVertices().size()));
             sender.sendMessage(this.msg("region-info-area", region.getArea()));
             sender.sendMessage(this.msg("region-info-vertices-title"));
-            List<int[]> verts = region.getVertices();
+            List<double[]> verts = region.getVertices();
             int maxShown = 15;
 
             for (int i = 0; i < verts.size() && i < maxShown; i++) {
-               sender.sendMessage(this.msg("region-info-vertex", verts.get(i)[0], verts.get(i)[1]));
+               sender.sendMessage(this.msg("region-info-vertex", fmtCoord(verts.get(i)[0]), fmtCoord(verts.get(i)[1])));
             }
 
             if (verts.size() > maxShown) {
                sender.sendMessage(this.msg("region-info-vertices-more", verts.size() - maxShown));
             }
 
-            sender.sendMessage(this.msg("region-info-center", (int)region.getCenterX(), (int)region.getCenterZ()));
+            sender.sendMessage(this.msg("region-info-center", fmtCoord(region.getCenterX()), fmtCoord(region.getCenterZ())));
             sender.sendMessage(this.msg("region-info-commands", region.getEnterCommands().size()));
             return true;
          }

@@ -183,7 +183,7 @@ public final class PolygonOverlay {
 
          for (PolygonRegion rx : regions) {
             if (rx.isShowLine()) {
-               List<int[]> v = rx.getVertices();
+               List<double[]> v = rx.getVertices();
                int n = v.size();
                if (n >= 2) {
                   int color = rx.getLineColor() | 0xFF000000;
@@ -193,8 +193,8 @@ public final class PolygonOverlay {
                   float cb = (float)(color & 0xFF) / 255.0F;
 
                   for (int i = 0; i < n; i++) {
-                     int[] pa = v.get(i);
-                     int[] pb = v.get((i + 1) % n);
+                     double[] pa = v.get(i);
+                     double[] pb = v.get((i + 1) % n);
                      int ax = worldToScreenX((double)pa[0], camX, originX, scale);
                      int ay = worldToScreenY((double)pa[1], camZ, originY, scale);
                      int bx = worldToScreenX((double)pb[0], camX, originX, scale);
@@ -319,7 +319,7 @@ public final class PolygonOverlay {
       int clipCy,
       int clipR
    ) {
-      List<int[]> v = r.getVertices();
+      List<double[]> v = r.getVertices();
       int n = v.size();
       if (n >= 3) {
          int fillColor = r.getFillColor();

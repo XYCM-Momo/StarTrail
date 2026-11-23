@@ -48,13 +48,15 @@ public class PolygonRegionManager {
 
                   List<?> rawVerts = sec.getList("polygon");
                   if (rawVerts != null && rawVerts.size() >= 3) {
-                     List<int[]> verts = new ArrayList<>();
+                     List<double[]> verts = new ArrayList<>();
 
                      for (Object obj : rawVerts) {
                         if (obj instanceof Map<?, ?> m) {
-                           int x = ((Number)m.get("x")).intValue();
-                           int z = ((Number)m.get("z")).intValue();
-                           verts.add(new int[]{x, z});
+                           // 必须用 doubleValue：区域坐标允许小数（如 -123.5），
+                           // 早先用 intValue 会把小数直接截断，导致画出来的线偏移到整数点。
+                           double x = ((Number)m.get("x")).doubleValue();
+                           double z = ((Number)m.get("z")).doubleValue();
+                           verts.add(new double[]{x, z});
                         }
                      }
 

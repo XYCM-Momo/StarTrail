@@ -7,18 +7,18 @@ public class PolygonRegion {
    private final String id;
    private final String name;
    private final String world;
-   private final List<int[]> vertices;
+   private final List<double[]> vertices;
    private final int lineColor;
    private final int fillColor;
    private final boolean showLine;
    private final boolean fillEnabled;
-   private final int minX;
-   private final int maxX;
-   private final int minZ;
-   private final int maxZ;
+   private final double minX;
+   private final double maxX;
+   private final double minZ;
+   private final double maxZ;
    private final List<String> enterCommands;
 
-   public PolygonRegion(String id, String name, String world, List<int[]> vertices, int lineColor, int fillColor, boolean showLine, boolean fillEnabled) {
+   public PolygonRegion(String id, String name, String world, List<double[]> vertices, int lineColor, int fillColor, boolean showLine, boolean fillEnabled) {
       this(id, name, world, vertices, lineColor, fillColor, showLine, fillEnabled, null);
    }
 
@@ -26,7 +26,7 @@ public class PolygonRegion {
       String id,
       String name,
       String world,
-      List<int[]> vertices,
+      List<double[]> vertices,
       int lineColor,
       int fillColor,
       boolean showLine,
@@ -42,12 +42,12 @@ public class PolygonRegion {
       this.showLine = showLine;
       this.fillEnabled = fillEnabled;
       this.enterCommands = (List<String>)(enterCommands != null ? enterCommands : new ArrayList<>());
-      int minx = Integer.MAX_VALUE;
-      int maxx = Integer.MIN_VALUE;
-      int minz = Integer.MAX_VALUE;
-      int maxz = Integer.MIN_VALUE;
+      double minx = Double.MAX_VALUE;
+      double maxx = -Double.MAX_VALUE;
+      double minz = Double.MAX_VALUE;
+      double maxz = -Double.MAX_VALUE;
 
-      for (int[] v : vertices) {
+      for (double[] v : vertices) {
          if (v[0] < minx) {
             minx = v[0];
          }
@@ -83,7 +83,7 @@ public class PolygonRegion {
       return this.world;
    }
 
-   public List<int[]> getVertices() {
+   public List<double[]> getVertices() {
       return this.vertices;
    }
 
@@ -103,19 +103,19 @@ public class PolygonRegion {
       return this.fillEnabled;
    }
 
-   public int getMinX() {
+   public double getMinX() {
       return this.minX;
    }
 
-   public int getMaxX() {
+   public double getMaxX() {
       return this.maxX;
    }
 
-   public int getMinZ() {
+   public double getMinZ() {
       return this.minZ;
    }
 
-   public int getMaxZ() {
+   public double getMaxZ() {
       return this.maxZ;
    }
 
@@ -136,11 +136,11 @@ public class PolygonRegion {
       }
 
       for (int i = 0, j = n - 1; i < n; j = i++) {
-         int xi = this.vertices.get(i)[0];
-         int zi = this.vertices.get(i)[1];
-         int xj = this.vertices.get(j)[0];
-         int zj = this.vertices.get(j)[1];
-         sum += (double)xj * (double)zi - (double)xi * (double)zj;
+         double xi = this.vertices.get(i)[0];
+         double zi = this.vertices.get(i)[1];
+         double xj = this.vertices.get(j)[0];
+         double zj = this.vertices.get(j)[1];
+         sum += xj * zi - xi * zj;
       }
 
       return Math.abs(Math.round(sum / 2.0));
@@ -158,11 +158,11 @@ public class PolygonRegion {
             int j = n - 1;
 
             for (int i = 0; i < n; j = i++) {
-               int xi = this.vertices.get(i)[0];
-               int zi = this.vertices.get(i)[1];
-               int xj = this.vertices.get(j)[0];
-               int zj = this.vertices.get(j)[1];
-               if (zi > z != zj > z && (double)x < (double)((xj - xi) * (z - zi)) / (double)(zj - zi) + (double)xi) {
+               double xi = this.vertices.get(i)[0];
+               double zi = this.vertices.get(i)[1];
+               double xj = this.vertices.get(j)[0];
+               double zj = this.vertices.get(j)[1];
+               if (zi > z != zj > z && x < (xj - xi) * (z - zi) / (zj - zi) + xi) {
                   inside = !inside;
                }
             }
@@ -175,7 +175,7 @@ public class PolygonRegion {
    public double getCenterX() {
       double sum = 0.0;
 
-      for (int[] v : this.vertices) {
+      for (double[] v : this.vertices) {
          sum += (double)v[0];
       }
 
@@ -185,7 +185,7 @@ public class PolygonRegion {
    public double getCenterZ() {
       double sum = 0.0;
 
-      for (int[] v : this.vertices) {
+      for (double[] v : this.vertices) {
          sum += (double)v[1];
       }
 

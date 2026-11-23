@@ -303,10 +303,10 @@ public class MinimapRenderer {
    /**
     * 点是否在多边形内（射线法）。
     *
-    * <p>顶点是 {@code int[]{x, z}}，按世界坐标判定。
+    * <p>顶点是 {@code double[]{x, z}}，按世界坐标判定（区域坐标允许小数）。
     */
    private static boolean containsPoint(PolygonRegion poly, double px, double pz) {
-      java.util.List<int[]> verts = poly.getVertices();
+      java.util.List<double[]> verts = poly.getVertices();
       if (verts == null || verts.size() < 3) {
          return false;
       }

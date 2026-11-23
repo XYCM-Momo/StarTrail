@@ -34,7 +34,9 @@ public class PacketSender {
       try {
          PacketSender.PacketBuffer buf = new PacketSender.PacketBuffer();
          buf.writeByte(1);
-         buf.writeInt(1);
+         // 协议号 2：多边形顶点由 int 改为 double（区域坐标支持小数）。
+         // 客户端据此判断按 int 还是 double 解析顶点，保证新旧搭配时不至于整包错位。
+         buf.writeInt(2);
          buf.writeString("StarTrail-Server");
          double threshold = this.plugin.getConfig().getDouble("settings.warp-icon-hide-threshold", 0.8);
          buf.writeDouble(threshold);
@@ -148,9 +150,10 @@ public class PacketSender {
             buf.writeString(this.toClientWorldKey(r.getWorld()));
             buf.writeVarInt(r.getVertices().size());
 
-            for (int[] v : r.getVertices()) {
-               buf.writeInt(v[0]);
-               buf.writeInt(v[1]);
+            for (double[] v : r.getVertices()) {
+               // 顶点用 double 传：区域坐标允许小数，用 int 会偏移到整数格
+               buf.writeDouble(v[0]);
+               buf.writeDouble(v[1]);
             }
 
             buf.writeInt(r.getLineColor());
