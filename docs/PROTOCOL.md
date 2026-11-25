@@ -203,6 +203,35 @@ double  y            ← 【v1.1.4 后加】目标 Y；hasY=false 时无意义�
 * `hasY` / `y` 同样是后加字段。客户端按「能读就读，读不到就视为未指定」处理：
   未指定 Y 时按该列 `MOTION_BLOCKING` 最高方块推断——**楼内/洞穴点位必须带 Y**，否则终点会跑到屋顶上方。
 
+#### 1.0.7 起：追加 `mode` 字段（四模式）
+
+包尾再追加一个 `byte mode`，把「导航」拆成独立操作：
+
+```
+byte   包类型 = 10
+boolean stop
+double  x
+double  z
+string  label
+boolean hasY
+double  y             ← **无论 hasY 真假都会写一个占位 8 字节**
+byte    mode          ← 0停止 1导航 2标记点 3清空
+```
+
+| mode | 行为 | 对应指令 |
+|---|---|---|
+| 0 | 停止当前导航 | `/startrail nav stop <玩家>` |
+| 1 | 开始导航（算路径、铺粒子、判到达） | `/startrail nav` / `/startrail navpath` |
+| 2 | 只创建标记点（不导航、不画路径，**可多个**） | `/startrail navpoint` |
+| 3 | **清空全部**（标记点 + 正在进行的导航） | `/startrail navclear` |
+
+> ⚠️ **读 `y` 时不能带 `hasY` 条件**：服务端无论 `hasY` 真假都写一个 `double` 占位，
+> 客户端若在 `hasY=false` 时跳过这 8 字节，后续 `mode` 就会落在 y 的字节上，
+> 表现为「清空」被误读成 `op=0`。**必须无条件读掉这 8 字节**，再按 `hasY` 决定是否采用。
+>
+> 老服务端（无 `mode`）时：客户端按 `stop ? 0 : 1` 推断，行为与旧版一致。
+> 老客户端（无 `mode` 读取逻辑）同样安全：它在 `label` 之后就不再读，多出的字节不影响。
+
 ### 包 11 · NPC 列表 NpcList
 
 服务端每 2 秒下发一次「玩家附近属于 Adyeshach 的 NPC UUID」，客户端据此把 NPC 和真人玩家区分开。

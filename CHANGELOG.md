@@ -5,6 +5,37 @@
 
 ---
 
+## [插件 1.0.7 / 模组 1.1.27] — 2026-11-26（**两端都要换 jar**）
+
+**导航指令拆分：
+avpoint 只标点、
+avpath 发起导航、
+avclear 清空全部；保留 
+av。**
+
+* **新指令**（都需 `startrail.command.nav` 权限）：
+  * `/startrail navpath <玩家> <x> <y> <z> [名称]` —— 发起导航，**与 nav 完全等价**；
+  * `/startrail navpoint <玩家> <x> <y> <z> [名称]` —— **只创建一个标记点**：
+    不导航、不算路径、不铺粒子，但**可同时存在多个**；
+  * `/startrail navclear <玩家>` —— **清空全部**：所有标记点 + 正在进行的导航。
+  * `/startrail nav` 保留不变（回显里写「下发导航」），不影响既有用法。
+* **协议**：包 10 末尾追加 `byte mode`（0停止 1导航 2标记点 3清空）。
+  服务端旧重载 `sendNavCommand(...)` 保留，内部按 `stop ? 0 : 1` 转发。
+* **客户端**：新增 `NavPointMarkerStore` 保存多个标记点（同位置同名称去重）；
+  `NavMarkerOverlay` 的绘制函数从「直接读 `NavigationManager`」解耦成接收 `(tx, ty, tz)`，
+  导航与标记点**共用同一套屏幕标记绘制**；新增 `renderPointMarkers`。
+* **修掉一个潜伏的真 bug**：客户端读 `y` 原本写成 `if (hasY) y = readDouble()`，
+  但**服务端无论 hasY 真假都会写一个 double 占位**——`hasY=false` 时那 8 字节没人读，
+  新加的 `mode` 就落在 y 的字节上，导致「清空」被误读成 `op=0`（标记点 2、清空 3 全部退化成停止）。
+  改为**无条件读掉这 8 字节**，再按 `hasY` 决定是否采用。
+  旧版本因为 `y` 之后没有字段，这个错位才一直没暴露。
+* **验证**：两端 `compileJava` 均 `BUILD SUCCESSFUL`；协议端到端测试 **10 项全 PASS** ——
+  四种模式编解码正确、**清空 op=3（修正前为 0）**、`hasY=false` 时 y 为 NaN 且 op 正确、
+  旧服务端无 mode 时按 stop 推断、标记点集合可多个/去重/清空。
+* **要不要换 jar**：**两端都要换**，客户端 `startrail-forge-1.1.27.jar`（需重启游戏）
+  ＋ 服务端 `StarTrail-Plugin-1.0.7.jar`（**需先关服**）。
+
+---
 ## [模组 1.1.26] — 2026-11-24（**只换客户端，插件 1.0.6 不变**）
 
 **F3 调试屏改为叠在小地图**上方**（1.1.25 的做法方向反了）。**

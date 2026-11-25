@@ -271,6 +271,11 @@ public class NavigationManager {
     * 目标区块已加载时取 MOTION_BLOCKING 最高方块 Y（即方块顶部所在高度，粒子再 +0.2 悬空可见）；
     * 未加载/未知时退回玩家当前高度（客户端不能同步加载远距离区块）。
     */
+   /** 按地表推断某个 XZ 的高度（标记点未指定 Y 时复用）。 */
+   public double resolveSurfaceY(double tx, double tz) {
+      return this.findSurfaceY(tx, tz);
+   }
+
    private double findSurfaceY(double tx, double tz) {
       Minecraft client = Minecraft.getInstance();
       if (client.player == null || client.level == null) {

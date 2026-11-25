@@ -77,7 +77,23 @@ public class PacketSender {
     * @param stop true 表示停止当前导航（此时忽略 x / y / z / label）
     * @param hasY true 表示 y 有效（服务端指定了高度）；false 则由客户端按地表自行推断
     */
+   /**
+    * 下发导航类指令（包类型 10）。
+    *
+    * <p>末尾追加了 {@code mode} 字段区分四种操作，老客户端读到原先的字段就结束解析，不受影响：
+    * <ul>
+    *   <li>0 = 停止导航（沿用原 stop 语义，也用于「全部清空」）</li>
+    *   <li>1 = 开始导航（算路径、铺粒子、判到达）</li>
+    *   <li>2 = 只创建标记点（画屏幕标记，不导航，可多个）</li>
+    *   <li>3 = 清空全部（标记点 + 正在进行的导航）</li>
+    * </ul>
+    */
    public void sendNavCommand(Player player, double x, double y, double z, String label, boolean stop, boolean hasY) {
+      this.sendNavCommand(player, x, y, z, label, stop, hasY, stop ? 0 : 1);
+   }
+
+   /** 带操作模式的完整版本，见 {@link #sendNavCommand(Player, double, double, double, String, boolean, boolean)}。 */
+   public void sendNavCommand(Player player, double x, double y, double z, String label, boolean stop, boolean hasY, int mode) {
       try {
          PacketSender.PacketBuffer buf = new PacketSender.PacketBuffer();
          buf.writeByte(10);
@@ -89,6 +105,8 @@ public class PacketSender {
          // 老客户端读到 string label 就结束解析，不会因为多了几个字节出问题。
          buf.writeBoolean(hasY);
          buf.writeDouble(hasY ? y : 0.0);
+         // 再后加的 mode：老客户端同样在 label 处就停，读不到也不会错位
+         buf.writeByte(mode);
          this.sendPacket(player, buf.toByteArray());
       } catch (Exception var8) {
          this.plugin.getLogger().warning("发送导航指令包失败: " + var8.getMessage());

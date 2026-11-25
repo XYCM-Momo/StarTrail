@@ -47,6 +47,8 @@ public class StarTrailClient {
     private WaypointStore waypointStore;
     private com.asterovie.momo.startrail.client.npc.NpcStore npcStore;
     private NavigationManager navigationManager;
+    /** 「创建点」指令产生的独立标记点（可多个，不导航）。 */
+    private com.asterovie.momo.startrail.client.nav.NavPointMarkerStore navPointMarkerStore;
 
     /** 服务端握手包下发的「是否允许大地图传送」（仅 OP 为 true），用于决定右键菜单是否显示传送选项。 */
     private volatile boolean canTeleportFromMap = false;
@@ -79,6 +81,7 @@ public class StarTrailClient {
         this.waypointStore = new WaypointStore();
         this.npcStore = new com.asterovie.momo.startrail.client.npc.NpcStore();
         this.navigationManager = new NavigationManager(this.waypointStore);
+        this.navPointMarkerStore = new com.asterovie.momo.startrail.client.nav.NavPointMarkerStore();
         this.waypointStore.reload();
         this.networkHandler = new NetworkHandler(this.regionDataStore, this.polygonRegionStore, this.warpPointStore);
         this.minimapManager = new MinimapManager(
@@ -140,6 +143,8 @@ public class StarTrailClient {
             this.navigationManager.getViewTurner().tick(client.player);
         }
         NavMarkerOverlay.render(event.getGuiGraphics(), client);
+        // 「创建点」指令产生的独立标记（可多个，不导航），与导航标记共用同一套绘制
+        NavMarkerOverlay.renderPointMarkers(event.getGuiGraphics(), client);
     }
 
     private void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
@@ -155,6 +160,9 @@ public class StarTrailClient {
         this.mobHeadManager.clear();
         if (this.navigationManager != null) {
             this.navigationManager.stopNav();
+        }
+        if (this.navPointMarkerStore != null) {
+            this.navPointMarkerStore.clear();
         }
         StarTrailMod.LOGGER.info("已断开服务器连接，清空地图数据");
     }
@@ -214,6 +222,10 @@ public class StarTrailClient {
 
     public com.asterovie.momo.startrail.client.npc.NpcStore getNpcStore() {
         return this.npcStore;
+    }
+
+    public com.asterovie.momo.startrail.client.nav.NavPointMarkerStore getNavPointMarkerStore() {
+        return this.navPointMarkerStore;
     }
 
     public NavigationManager getNavigationManager() {

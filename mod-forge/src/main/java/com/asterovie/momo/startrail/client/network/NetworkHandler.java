@@ -7,6 +7,7 @@ import com.asterovie.momo.startrail.client.image.MapImage;
 import com.asterovie.momo.startrail.client.image.MapImageManager;
 import com.asterovie.momo.startrail.client.mythic.MythicMob;
 import com.asterovie.momo.startrail.client.mythic.MythicMobStore;
+import com.asterovie.momo.startrail.client.nav.NavPointMarkerStore;
 import com.asterovie.momo.startrail.client.nav.NavigationManager;
 import com.asterovie.momo.startrail.client.region.MapRegion;
 import com.asterovie.momo.startrail.client.region.PolygonRegion;
@@ -405,24 +406,37 @@ public class NetworkHandler {
         String label = "";
         // 以下是后加字段，老服务端不发：读不到就当作「未指定 Y」
         double y = Double.NaN;
+        // 操作模式：0=停止 1=导航 2=只创建标记点 3=清空全部。
+        // 老服务端不发这个字段，按 stop 推断（stop ? 0 : 1），行为与旧版一致。
+        int mode = -1;
         try {
             if (buf.isReadable()) {
                 label = buf.readUtf();
             }
             if (buf.isReadable()) {
                 boolean hasY = buf.readBoolean();
-                if (hasY && buf.isReadable()) {
-                    y = buf.readDouble();
+                // 注意：服务端**无论 hasY 真假都会写一个 double 占位**（writeDouble(hasY ? y : 0.0)），
+                // 所以这里必须无条件读掉这 8 字节，否则后续字段全部错位——
+                // 曾经写成 `if (hasY) y = readDouble()`，导致 hasY=false 时 mode 读到了 y 的字节。
+                if (buf.isReadable()) {
+                    double rawY = buf.readDouble();
+                    y = hasY ? rawY : Double.NaN;
                 }
             }
+            if (buf.isReadable()) {
+                mode = buf.readByte();
+            }
         } catch (Exception var9) {
-            StarTrailMod.LOGGER.warn("[NavRecv] 读取导航点名称/Y 失败，按默认值处理: {}", var9.getMessage());
+            StarTrailMod.LOGGER.warn("[NavRecv] 读取导航点名称/Y/模式 失败，按默认值处理: {}", var9.getMessage());
         }
+
+        // 老服务端没发 mode 时的兜底
+        final int op = mode >= 0 ? mode : (stop ? 0 : 1);
 
         final String navLabel = label;
         final double navY = y;
-        StarTrailMod.LOGGER.info("[NavRecv] 收到服务端导航指令: stop={} ({}, {}, {}) label='{}'",
-                new Object[]{stop, x, navY, z, navLabel});
+        StarTrailMod.LOGGER.info("[NavRecv] 收到服务端导航指令: op={} stop={} ({}, {}, {}) label='{}'",
+                new Object[]{op, stop, x, navY, z, navLabel});
         client.execute(() -> {
             StarTrailClient startrail = StarTrailClient.getInstance();
             NavigationManager nav = startrail != null ? startrail.getNavigationManager() : null;
@@ -430,7 +444,35 @@ public class NetworkHandler {
                 return;
             }
 
-            if (stop) {
+            // 清空全部：标记点 + 正在进行的导航
+            if (op == 3) {
+                NavPointMarkerStore markers = startrail.getNavPointMarkerStore();
+                if (markers != null) {
+                    markers.clear();
+                }
+                nav.stopNav();
+                client.player.displayClientMessage(
+                        Component.literal("\u00a7e[\u5bfc\u822a] \u670d\u52a1\u5668\u5df2\u6e05\u7a7a\u6240\u6709\u5bfc\u822a\u4e0e\u6807\u8bb0\u70b9"), false);
+                return;
+            }
+
+            // 只创建标记点：不导航、不画路径、不判到达，可同时存在多个
+            if (op == 2) {
+                NavPointMarkerStore markers = startrail.getNavPointMarkerStore();
+                if (markers == null) {
+                    return;
+                }
+
+                String world = ConfigManager.getInstance().getCurrentWorld();
+                markers.add(new NavPointMarkerStore.Marker(x, navY, z, navLabel, world));
+                String shown = navLabel.isEmpty() ? ("(" + fmt(x) + ", " + fmt(z) + ")") : navLabel;
+                client.player.displayClientMessage(
+                        Component.literal("\u00a7a[\u5bfc\u822a] \u5df2\u6807\u8bb0\u70b9\uff1a\u00a7f" + shown
+                                + "\u00a7a\uff08\u5171 " + markers.size() + " \u4e2a\uff09"), false);
+                return;
+            }
+
+            if (stop || op == 0) {
                 nav.stopNav();
                 client.player.displayClientMessage(Component.literal("\u00a7e[\u5bfc\u822a] \u670d\u52a1\u5668\u5df2\u505c\u6b62\u4f60\u7684\u5bfc\u822a"), false);
                 return;

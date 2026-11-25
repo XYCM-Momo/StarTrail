@@ -72,26 +72,84 @@ public final class NavMarkerOverlay {
          return;
       }
 
-      double[] projected = projectToScreen(client, nav, screenW, screenH);
+      double[] projected = projectToScreen(client, nav.getTargetX(), nav.getTargetY(), nav.getTargetZ(), screenW, screenH);
       String targetLabel = nav.getTargetLabel();
       if (projected != null) {
          drawOnScreenMarker(ctx, client.font, (float)projected[0], (float)projected[1], distance, targetLabel);
       } else {
-         drawOffScreenMarker(ctx, client.font, client, nav, screenW, screenH, distance, targetLabel);
+         drawOffScreenMarker(ctx, client.font, client, nav.getTargetX(), nav.getTargetZ(), screenW, screenH, distance, targetLabel);
       }
    }
 
    /**
+    * 渲染「创建点」指令产生的独立标记点。
+    *
+    * <p>与导航共用同一套绘制（{@code drawOnScreenMarker} / {@code drawOffScreenMarker}），
+    * 但**不算路径、不铺粒子、不做到达判定**——只是把位置标在屏幕上，且**可以有多个**。
+    */
+   public static void renderPointMarkers(GuiGraphics ctx, Minecraft client) {
+      if (client.player == null || client.level == null) {
+         return;
+      }
+
+      StarTrailClient startrail = StarTrailClient.getInstance();
+      if (startrail == null) {
+         return;
+      }
+
+      NavPointMarkerStore store = startrail.getNavPointMarkerStore();
+      if (store == null || store.isEmpty()) {
+         return;
+      }
+
+      ConfigManager.ClientConfig cfg = ConfigManager.getInstance().getConfig();
+      if (cfg != null && cfg.nav != null && !cfg.nav.showMarker) {
+         return;
+      }
+
+      int screenW = client.getWindow().getGuiScaledWidth();
+      int screenH = client.getWindow().getGuiScaledHeight();
+      if (screenW <= 0 || screenH <= 0) {
+         return;
+      }
+
+      NavigationManager nav = startrail.getNavigationManager();
+      String currentWorld = ConfigManager.getInstance().getCurrentWorld();
+
+      for (NavPointMarkerStore.Marker marker : store.snapshot()) {
+         // 只显示在创建该标记时所在的世界
+         if (!marker.getWorld().isEmpty() && currentWorld != null && !marker.getWorld().equals(currentWorld)) {
+            continue;
+         }
+
+         // 未指定 Y 时按地表推断（与导航的 hasY=false 行为一致）
+         double ty = marker.hasY()
+            ? marker.getY()
+            : (nav != null ? nav.resolveSurfaceY(marker.getX(), marker.getZ()) : client.player.getY());
+
+         double dx = marker.getX() - client.player.getX();
+         double dz = marker.getZ() - client.player.getZ();
+         double distance = Math.sqrt(dx * dx + dz * dz);
+
+         double[] projected = projectToScreen(client, marker.getX(), ty, marker.getZ(), screenW, screenH);
+         if (projected != null) {
+            drawOnScreenMarker(ctx, client.font, (float)projected[0], (float)projected[1], distance, marker.getLabel());
+         } else {
+            drawOffScreenMarker(ctx, client.font, client, marker.getX(), marker.getZ(), screenW, screenH, distance, marker.getLabel());
+         }
+      }
+   }
+   /**
     * 把目标投到屏幕上；返回 {x, y}，目标在相机背后或投影落到屏幕外时返回 null。
     */
-   private static double[] projectToScreen(Minecraft client, NavigationManager nav, int screenW, int screenH) {
+   private static double[] projectToScreen(Minecraft client, double tx, double ty, double tz, int screenW, int screenH) {
       double cameraX = client.gameRenderer.getMainCamera().getPosition().x;
       double cameraY = client.gameRenderer.getMainCamera().getPosition().y;
       double cameraZ = client.gameRenderer.getMainCamera().getPosition().z;
 
-      double dx = nav.getTargetX() - cameraX;
-      double dy = nav.getTargetY() - cameraY;
-      double dz = nav.getTargetZ() - cameraZ;
+      double dx = tx - cameraX;
+      double dy = ty - cameraY;
+      double dz = tz - cameraZ;
 
       // 相机的三根基向量（与 MC 的 yaw/pitch 约定一致：
       // yaw=0 朝 +Z，yaw 增大向 -X 转；pitch>0 低头）
@@ -179,7 +237,7 @@ public final class NavMarkerOverlay {
     * 那样目标在身后时方向会反。
     */
    private static void drawOffScreenMarker(
-      GuiGraphics ctx, Font font, Minecraft client, NavigationManager nav, int screenW, int screenH, double distance, String targetLabel
+      GuiGraphics ctx, Font font, Minecraft client, double tx, double tz, int screenW, int screenH, double distance, String targetLabel
    ) {
       double px = client.player != null ? client.player.getX() : 0.0;
       double pz = client.player != null ? client.player.getZ() : 0.0;
@@ -190,8 +248,8 @@ public final class NavMarkerOverlay {
       //   rel = atan2(h, d)：0 = 正前（贴在上边中间），+90° = 正右，±180° = 正后，-90° = 正左
       float yaw = client.gameRenderer.getMainCamera().getYRot();
       double yawRad = Math.toRadians((double)yaw);
-      double hx = nav.getTargetX() - px;
-      double hz = nav.getTargetZ() - pz;
+      double hx = tx - px;
+      double hz = tz - pz;
       double fwdX = -Math.sin(yawRad);
       double fwdZ = Math.cos(yawRad);
       double rightX = -Math.cos(yawRad);

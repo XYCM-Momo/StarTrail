@@ -52,6 +52,15 @@ public class StarTrailCommand implements CommandExecutor, TabCompleter {
                return this.handleMap(sender, args);
             case "nav":
                return this.handleNav(sender, args);
+            case "navpath":
+               // 发起导航（与 nav 等价，语义更明确）
+               return this.handleNavPath(sender, args);
+            case "navpoint":
+               // 只创建标记点，不导航
+               return this.handleNavPoint(sender, args);
+            case "navclear":
+               // 清空全部：标记点 + 正在进行的导航
+               return this.handleNavClear(sender, args);
             case "tp":
                return this.handleTp(sender, args);
             case "warp":
@@ -411,54 +420,166 @@ public class StarTrailCommand implements CommandExecutor, TabCompleter {
             return true;
          }
 
-         // 两种情况都支持：
+         // 两种情况都支持（解析逻辑与 navpoint 共用，避免两边写法漂移）：
          //   nav <玩家> <x> <y> <z> [名称]  -> args[2..4] 是坐标，args[5..] 是名称
          //   nav <玩家> <x> <z>     [名称]  -> args[2..3] 是坐标，args[4..] 是名称（旧写法，Y 交给客户端推断）
-         double x;
-         double y = 0.0;
-         double z;
-         boolean hasY;
-         int labelStart;
-         try {
-            x = Double.parseDouble(args[2]);
-            // 第 4 个参数能不能解析成数字，决定它是 Y 还是（旧写法下的）Z 或名称开头
-            boolean fourthIsNumber = args.length >= 5 && isNumber(args[3]) && isNumber(args[4]);
-            if (fourthIsNumber) {
-               y = Double.parseDouble(args[3]);
-               z = Double.parseDouble(args[4]);
-               hasY = true;
-               labelStart = 5;
-            } else {
-               z = Double.parseDouble(args[3]);
-               hasY = false;
-               labelStart = 4;
-            }
-         } catch (NumberFormatException var8) {
-            sender.sendMessage(this.msg("coord-must-number"));
+         NavCoord coord = this.parseNavCoord(sender, args);
+         if (coord == null) {
             return true;
          }
 
-         // 剩余参数拼成导航点名称（允许带空格）
-         String label = "";
-         if (args.length > labelStart) {
-            StringBuilder sb = new StringBuilder();
-            for (int i = labelStart; i < args.length; i++) {
-               if (sb.length() > 0) {
-                  sb.append(' ');
-               }
-               sb.append(args[i]);
-            }
-            label = sb.toString();
-         }
+         double x = coord.x;
+         double y = coord.y;
+         double z = coord.z;
+         boolean hasY = coord.hasY;
+         String label = coord.label;
 
          this.plugin.getPacketSender().sendNavCommand(target, x, y, z, label, false, hasY);
-         String shown = label.isEmpty()
-            ? (hasY ? ("(" + x + ", " + y + ", " + z + ")") : ("(" + x + ", " + z + ")"))
-            : label;
+         String shown = label.isEmpty() ? coord.describe() : label;
          // 成功回显只走控制台：被导航玩家自己会收到客户端那条「服务器开始导航」
          this.navFeedback(sender, "已向", target.getName(), "下发导航 " + shown);
          return true;
       }
+   }
+
+   /**
+    * {@code /startrail navpath <玩家> <x> <y> <z> [名称]} —— 发起导航。
+    *
+    * <p>与 {@code /startrail nav} 完全等价，只是名字更明确「这是路径导航」。
+    * 保留 nav 是为了不破坏已有指令习惯。
+    */
+   private boolean handleNavPath(CommandSender sender, String[] args) {
+      return this.handleNav(sender, args);
+   }
+
+   /**
+    * {@code /startrail navpoint <玩家> <x> <y> <z> [名称]} —— 只创建一个标记点。
+    *
+    * <p>不导航、不算路径、不铺粒子；客户端把它画成与导航标记同样的屏幕标记，
+    * 并且**可以同时存在多个**。
+    */
+   private boolean handleNavPoint(CommandSender sender, String[] args) {
+      if (!sender.hasPermission("startrail.command.nav")) {
+         sender.sendMessage(this.msg("nav-no-permission"));
+         return true;
+      }
+
+      if (args.length < 4) {
+         sender.sendMessage(this.msg("navpoint-usage"));
+         return true;
+      }
+
+      Player target = Bukkit.getPlayerExact(args[1]);
+      if (target == null) {
+         sender.sendMessage(this.msg("nav-player-not-found", args[1]));
+         return true;
+      }
+
+      NavCoord coord = this.parseNavCoord(sender, args);
+      if (coord == null) {
+         return true;
+      }
+
+      // mode = 2：只创建标记点
+      this.plugin.getPacketSender().sendNavCommand(target, coord.x, coord.y, coord.z, coord.label, false, coord.hasY, 2);
+      String shown = coord.label.isEmpty() ? coord.describe() : coord.label;
+      this.navFeedback(sender, "已向", target.getName(), "创建标记点 " + shown);
+      return true;
+   }
+
+   /**
+    * {@code /startrail navclear <玩家>} —— 清空该玩家的**全部**导航状态。
+    *
+    * <p>包括：所有「创建点」标记点，以及正在进行的导航。
+    */
+   private boolean handleNavClear(CommandSender sender, String[] args) {
+      if (!sender.hasPermission("startrail.command.nav")) {
+         sender.sendMessage(this.msg("nav-no-permission"));
+         return true;
+      }
+
+      if (args.length < 2) {
+         sender.sendMessage(this.msg("navclear-usage"));
+         return true;
+      }
+
+      Player target = Bukkit.getPlayerExact(args[1]);
+      if (target == null) {
+         sender.sendMessage(this.msg("nav-player-not-found", args[1]));
+         return true;
+      }
+
+      // mode = 3：清空全部（标记点 + 正在进行的导航）
+      this.plugin.getPacketSender().sendNavCommand(target, 0.0, 0.0, 0.0, "", true, false, 3);
+      this.navFeedback(sender, "已让", target.getName(), "清空全部导航与标记点");
+      return true;
+   }
+
+   /** 解析好的导航坐标（供 nav / navpoint 复用）。 */
+   private static final class NavCoord {
+      final double x;
+      final double y;
+      final double z;
+      final boolean hasY;
+      final String label;
+
+      NavCoord(double x, double y, double z, boolean hasY, String label) {
+         this.x = x;
+         this.y = y;
+         this.z = z;
+         this.hasY = hasY;
+         this.label = label;
+      }
+
+      /** 没指定名称时用于回显的坐标串。 */
+      String describe() {
+         return this.hasY ? ("(" + this.x + ", " + this.y + ", " + this.z + ")") : ("(" + this.x + ", " + this.z + ")");
+      }
+   }
+
+   /**
+    * 解析 {@code <x> <y> <z> [名称]} 或旧写法 {@code <x> <z> [名称]}。
+    *
+    * <p>失败时已经给 sender 发了提示，调用方直接 return 即可。
+    */
+   private NavCoord parseNavCoord(CommandSender sender, String[] args) {
+      double x;
+      double y = 0.0;
+      double z;
+      boolean hasY;
+      int labelStart;
+      try {
+         x = Double.parseDouble(args[2]);
+         // 第 4、5 个参数都能解析成数字，才认为写的是 <x> <y> <z>
+         boolean fourthIsNumber = args.length >= 5 && isNumber(args[3]) && isNumber(args[4]);
+         if (fourthIsNumber) {
+            y = Double.parseDouble(args[3]);
+            z = Double.parseDouble(args[4]);
+            hasY = true;
+            labelStart = 5;
+         } else {
+            z = Double.parseDouble(args[3]);
+            hasY = false;
+            labelStart = 4;
+         }
+      } catch (NumberFormatException var8) {
+         sender.sendMessage(this.msg("coord-must-number"));
+         return null;
+      }
+
+      String label = "";
+      if (args.length > labelStart) {
+         StringBuilder sb = new StringBuilder();
+         for (int i = labelStart; i < args.length; i++) {
+            if (sb.length() > 0) {
+               sb.append(' ');
+            }
+            sb.append(args[i]);
+         }
+         label = sb.toString();
+      }
+
+      return new NavCoord(x, y, z, hasY, label);
    }
 
    /** 判断字符串能否解析成数字（用于区分 <x> <y> <z> 与 <x> <z> [名称] 两种写法）。 */
@@ -727,6 +848,9 @@ public class StarTrailCommand implements CommandExecutor, TabCompleter {
       sender.sendMessage(this.msg("help-map-list"));
       sender.sendMessage(this.msg("help-tp"));
       sender.sendMessage(this.msg("help-nav"));
+      sender.sendMessage(this.msg("help-navpath"));
+      sender.sendMessage(this.msg("help-navpoint"));
+      sender.sendMessage(this.msg("help-navclear"));
       sender.sendMessage(this.msg("help-warp-tp"));
       sender.sendMessage(this.msg("help-waypoint"));
       sender.sendMessage(this.msg("help-reload"));
@@ -739,7 +863,7 @@ public class StarTrailCommand implements CommandExecutor, TabCompleter {
    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
       List<String> completions = new ArrayList<>();
       if (args.length == 1) {
-         completions.addAll(Arrays.asList("list", "info", "reload", "map", "tp", "nav", "warp", "waypoint", "crypt", "help"));
+         completions.addAll(Arrays.asList("list", "info", "reload", "map", "tp", "nav", "navpath", "navpoint", "navclear", "warp", "waypoint", "crypt", "help"));
       } else if (args.length == 2) {
          String subCommand = args[0].toLowerCase();
          if (subCommand.equals("nav")) {
